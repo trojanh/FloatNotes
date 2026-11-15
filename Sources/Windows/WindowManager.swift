@@ -150,14 +150,31 @@ final class WindowManager: NSObject, NSWindowDelegate {
         // Dock to the top right of the visible screen with padding
         let rightPadding: CGFloat = 24.0
         let topPadding: CGFloat = 20.0
+        let bottomPadding: CGFloat = 20.0
         let noteSpacing: CGFloat = 14.0
+        let columnSpacing: CGFloat = 18.0
 
-        var currentTopY = visibleFrame.origin.y + visibleFrame.size.height - topPadding
+        let minY = visibleFrame.origin.y + bottomPadding
+        let initialTopY = visibleFrame.origin.y + visibleFrame.size.height - topPadding
+
+        var currentColumnRightX = visibleFrame.origin.x + visibleFrame.size.width - rightPadding
+        var currentTopY = initialTopY
+        var currentColumnMaxWidth: CGFloat = 0
 
         for note in pinnedNotes {
             let noteW = CGFloat(note.width)
             let noteH = CGFloat(note.height)
-            let targetX = visibleFrame.origin.x + visibleFrame.size.width - noteW - rightPadding
+
+            // If this note exceeds the bottom of the screen, wrap to a new column on the left
+            if currentTopY - noteH < minY && currentTopY < initialTopY {
+                currentColumnRightX -= (currentColumnMaxWidth + columnSpacing)
+                currentTopY = initialTopY
+                currentColumnMaxWidth = 0
+            }
+
+            currentColumnMaxWidth = max(currentColumnMaxWidth, noteW)
+
+            let targetX = currentColumnRightX - noteW
             let targetY = currentTopY - noteH
 
             let targetFrame = NSRect(x: targetX, y: targetY, width: noteW, height: noteH)
