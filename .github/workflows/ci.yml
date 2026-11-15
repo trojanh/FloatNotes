@@ -1,0 +1,28 @@
+name: CI Verification
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  build_and_test:
+    name: Build & Verify FloatNotes
+    runs-on: macos-14
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Select Xcode Version
+        run: sudo xcode-select -switch /Applications/Xcode_15.4.app/Contents/Developer || true
+
+      - name: Swift Build
+        run: swift build -c release
+
+      - name: Package App Bundle
+        run: |
+          chmod +x scripts/build_app.sh
+          ./scripts/build_app.sh
