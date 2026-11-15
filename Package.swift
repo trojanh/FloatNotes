@@ -2,13 +2,13 @@
 import PackageDescription
 
 let package = Package(
-    name: "FloatingNotes",
+    name: "FloatNotes",
     platforms: [
         .macOS(.v13)
     ],
     targets: [
         .executableTarget(
-            name: "FloatingNotes",
+            name: "FloatNotes",
             path: "Sources"
         ),
     ]
