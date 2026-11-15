@@ -19,7 +19,6 @@ final class StatusBarController: NSObject {
             .sink { [weak self] _ in
                 DispatchQueue.main.async {
                     self?.updateStatusItem()
-                    self?.setupMenu()
                 }
             }
             .store(in: &cancellables)
@@ -28,7 +27,6 @@ final class StatusBarController: NSObject {
             .sink { [weak self] _ in
                 DispatchQueue.main.async {
                     self?.updateStatusItem()
-                    self?.setupMenu()
                 }
             }
             .store(in: &cancellables)
@@ -68,6 +66,70 @@ final class StatusBarController: NSObject {
 
     private func setupMenu() {
         let menu = NSMenu()
+        menu.delegate = self
+        statusItem.menu = menu
+    }
+
+    @objc private func newNoteAction() {
+        if noteStore.areAllNotesHidden {
+            noteStore.showAllNotes()
+        }
+        let created = noteStore.createNote()
+        WindowManager.shared.focusNote(id: created.id)
+    }
+
+    @objc private func viewAllNotesAction() {
+        WindowManager.shared.showAllNotesWindow()
+    }
+
+    @objc private func toggleVisibilityAction() {
+        noteStore.toggleAllNotesVisibility()
+    }
+
+    @objc private func exportNotesAction() {
+        let savePanel = NSSavePanel()
+        savePanel.allowedContentTypes = [.json]
+        savePanel.canCreateDirectories = true
+        savePanel.nameFieldStringValue = "FloatingNotes_Backup.json"
+        savePanel.title = "Export Floating Notes"
+
+        NSApp.activate(ignoringOtherApps: true)
+        if savePanel.runModal() == .OK, let url = savePanel.url {
+            try? noteStore.exportNotes(to: url)
+        }
+    }
+
+    @objc private func importNotesAction() {
+        let openPanel = NSOpenPanel()
+        openPanel.allowedContentTypes = [.json]
+        openPanel.allowsMultipleSelection = false
+        openPanel.canChooseDirectories = false
+        openPanel.canChooseFiles = true
+        openPanel.title = "Import Floating Notes"
+
+        NSApp.activate(ignoringOtherApps: true)
+        if openPanel.runModal() == .OK, let url = openPanel.url {
+            try? noteStore.importNotes(from: url, append: true)
+        }
+    }
+
+    @objc private func focusNoteAction(_ sender: NSMenuItem) {
+        if let id = sender.representedObject as? UUID {
+            if noteStore.areAllNotesHidden {
+                noteStore.showAllNotes()
+            }
+            WindowManager.shared.focusNote(id: id)
+        }
+    }
+
+    @objc private func quitAction() {
+        NSApplication.shared.terminate(nil)
+    }
+}
+
+extension StatusBarController: NSMenuDelegate {
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        menu.removeAllItems()
 
         // New Note item
         let newNoteItem = NSMenuItem(title: "New Sticky Note", action: #selector(newNoteAction), keyEquivalent: "n")
@@ -89,6 +151,19 @@ final class StatusBarController: NSObject {
 
         menu.addItem(NSMenuItem.separator())
 
+        // Export / Import items
+        let exportItem = NSMenuItem(title: "Export Notes as JSON...", action: #selector(exportNotesAction), keyEquivalent: "e")
+        exportItem.keyEquivalentModifierMask = [.command, .shift]
+        exportItem.target = self
+        menu.addItem(exportItem)
+
+        let importItem = NSMenuItem(title: "Import Notes from JSON...", action: #selector(importNotesAction), keyEquivalent: "i")
+        importItem.keyEquivalentModifierMask = [.command, .shift]
+        importItem.target = self
+        menu.addItem(importItem)
+
+        menu.addItem(NSMenuItem.separator())
+
         // Quick list of active notes
         if noteStore.notes.isEmpty {
             let emptyItem = NSMenuItem(title: "No Sticky Notes", action: nil, keyEquivalent: "")
@@ -102,7 +177,9 @@ final class StatusBarController: NSObject {
             for (idx, note) in noteStore.notes.enumerated() {
                 let snippet = note.text.trimmingCharacters(in: .whitespacesAndNewlines)
                 let displayTitle = snippet.isEmpty ? "Untitled Note \(idx + 1)" : String(snippet.prefix(25))
-                let noteItem = NSMenuItem(title: "  • \(displayTitle)", action: #selector(focusNoteAction(_:)), keyEquivalent: "")
+                let statusMark = "[\(note.status.shortLabel)]"
+                let pinMark = note.isPinnedOnTop ? "📌" : "  "
+                let noteItem = NSMenuItem(title: "\(pinMark) \(statusMark) \(displayTitle)", action: #selector(focusNoteAction(_:)), keyEquivalent: "")
                 noteItem.representedObject = note.id
                 noteItem.target = self
                 menu.addItem(noteItem)
@@ -115,36 +192,5 @@ final class StatusBarController: NSObject {
         let quitItem = NSMenuItem(title: "Quit Floating Notes", action: #selector(quitAction), keyEquivalent: "q")
         quitItem.target = self
         menu.addItem(quitItem)
-
-        statusItem.menu = menu
-    }
-
-    @objc private func newNoteAction() {
-        if noteStore.areAllNotesHidden {
-            noteStore.showAllNotes()
-        }
-        let created = noteStore.createNote()
-        WindowManager.shared.focusNote(id: created.id)
-    }
-
-    @objc private func viewAllNotesAction() {
-        WindowManager.shared.showAllNotesWindow()
-    }
-
-    @objc private func toggleVisibilityAction() {
-        noteStore.toggleAllNotesVisibility()
-    }
-
-    @objc private func focusNoteAction(_ sender: NSMenuItem) {
-        if let id = sender.representedObject as? UUID {
-            if noteStore.areAllNotesHidden {
-                noteStore.showAllNotes()
-            }
-            WindowManager.shared.focusNote(id: id)
-        }
-    }
-
-    @objc private func quitAction() {
-        NSApplication.shared.terminate(nil)
     }
 }

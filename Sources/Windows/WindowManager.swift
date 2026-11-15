@@ -7,6 +7,7 @@ final class WindowManager: NSObject, NSWindowDelegate {
 
     private var noteStore: NoteStore!
     private var panels: [UUID: FloatingNotePanel] = [:]
+    private var noteObservables: [UUID: NoteObservable] = [:]
     private var allNotesWindow: NSWindow?
     private var cancellables = Set<AnyCancellable>()
 
@@ -33,10 +34,18 @@ final class WindowManager: NSObject, NSWindowDelegate {
         for (id, panel) in panels where !noteIds.contains(id) {
             panel.close()
             panels.removeValue(forKey: id)
+            noteObservables.removeValue(forKey: id)
         }
 
         // Add or update existing windows
         for note in notes {
+            if let obs = noteObservables[note.id] {
+                // Update observable model if changed from elsewhere (e.g. from AllNotesView)
+                if obs.note != note {
+                    obs.note = note
+                }
+            }
+
             if let existing = panels[note.id] {
                 existing.updateLevel(isPinned: note.isPinnedOnTop)
                 if !noteStore.areAllNotesHidden && note.isVisible {
@@ -54,30 +63,41 @@ final class WindowManager: NSObject, NSWindowDelegate {
 
     func updatePanelLevel(for id: UUID, isPinned: Bool) {
         panels[id]?.updateLevel(isPinned: isPinned)
+        if let obs = noteObservables[id], obs.note.isPinnedOnTop != isPinned {
+            obs.note.isPinnedOnTop = isPinned
+        }
+    }
+
+    func updateNoteStatus(for id: UUID, status: NoteStatus) {
+        if let obs = noteObservables[id] {
+            obs.note.status = status
+        }
     }
 
     private func createAndShowPanel(for note: StickyNote) {
-        let noteBinding = Binding<StickyNote>(
-            get: { [weak self] in
-                self?.noteStore.notes.first(where: { $0.id == note.id }) ?? note
-            },
-            set: { [weak self] updatedNote in
+        let observable = NoteObservable(note: note)
+        noteObservables[note.id] = observable
+
+        // Observe changes inside the note card and persist asynchronously
+        observable.$note
+            .dropFirst()
+            .sink { [weak self] updatedNote in
                 self?.noteStore.updateNote(updatedNote)
             }
-        )
+            .store(in: &cancellables)
 
         let cardView = NoteCardView(
-            note: noteBinding,
+            noteModel: observable,
             onDelete: { [weak self] in
                 self?.noteStore.deleteNote(id: note.id)
             },
             onTogglePin: { [weak self] in
                 guard let self = self else { return }
-                if var n = self.noteStore.notes.first(where: { $0.id == note.id }) {
-                    n.isPinnedOnTop.toggle()
-                    self.updatePanelLevel(for: note.id, isPinned: n.isPinnedOnTop)
-                    self.noteStore.updateNote(n, immediateSave: true)
-                }
+                var n = observable.note
+                n.isPinnedOnTop.toggle()
+                observable.note.isPinnedOnTop = n.isPinnedOnTop
+                self.updatePanelLevel(for: note.id, isPinned: n.isPinnedOnTop)
+                self.noteStore.updateNote(n, immediateSave: true)
             }
         )
 
@@ -125,7 +145,7 @@ final class WindowManager: NSObject, NSWindowDelegate {
         )
 
         let window = NSWindow(
-            contentRect: NSRect(x: 250, y: 250, width: 680, height: 480),
+            contentRect: NSRect(x: 250, y: 250, width: 720, height: 500),
             styleMask: [.titled, .closable, .resizable, .miniaturizable],
             backing: .buffered,
             defer: false
@@ -158,6 +178,12 @@ final class WindowManager: NSObject, NSWindowDelegate {
             note.width = Double(frame.size.width)
             note.height = Double(frame.size.height)
             noteStore.updateNote(note)
+            if let obs = noteObservables[panel.noteId] {
+                obs.note.x = note.x
+                obs.note.y = note.y
+                obs.note.width = note.width
+                obs.note.height = note.height
+            }
         }
     }
 }

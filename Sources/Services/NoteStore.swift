@@ -88,13 +88,38 @@ final class NoteStore: ObservableObject {
 
     func toggleAllNotesVisibility() {
         areAllNotesHidden.toggle()
-        objectWillChange.send()
     }
 
     func showAllNotes() {
         areAllNotesHidden = false
         for i in 0..<notes.count {
             notes[i].isVisible = true
+        }
+        saveNow()
+    }
+
+    // MARK: - Export & Import
+
+    func exportNotes(to url: URL) throws {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .prettyPrinted
+        let data = try encoder.encode(notes)
+        try data.write(to: url, options: .atomic)
+    }
+
+    func importNotes(from url: URL, append: Bool = true) throws {
+        let data = try Data(contentsOf: url)
+        let imported = try JSONDecoder().decode([StickyNote].self, from: data)
+        if append {
+            // Give newly imported notes fresh IDs to avoid collisions
+            let remapped = imported.map { item -> StickyNote in
+                var n = item
+                n.id = UUID()
+                return n
+            }
+            self.notes.append(contentsOf: remapped)
+        } else {
+            self.notes = imported
         }
         saveNow()
     }

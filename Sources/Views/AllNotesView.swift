@@ -42,6 +42,31 @@ struct AllNotesView: View {
 
                 Spacer()
 
+                // Export & Import Buttons
+                Button(action: exportAction) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.system(size: 11))
+                        Text("Export")
+                            .font(.system(size: 11))
+                    }
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .help("Export all notes to a JSON file")
+
+                Button(action: importAction) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "square.and.arrow.down")
+                            .font(.system(size: 11))
+                        Text("Import")
+                            .font(.system(size: 11))
+                    }
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .help("Import notes from a JSON backup file")
+
                 // Status Filter
                 Picker("", selection: $filterStatus) {
                     Text("All Status").tag("ALL")
@@ -50,7 +75,7 @@ struct AllNotesView: View {
                     }
                 }
                 .labelsHidden()
-                .frame(width: 110)
+                .frame(width: 105)
 
                 // New Note CTA
                 Button(action: {
@@ -162,7 +187,7 @@ struct AllNotesView: View {
                 .padding(20)
             }
         }
-        .frame(minWidth: 640, minHeight: 460)
+        .frame(minWidth: 680, minHeight: 480)
         .background(Color(NSColor.underPageBackgroundColor))
     }
 
@@ -175,6 +200,7 @@ struct AllNotesView: View {
                     set: { newStatus in
                         var updated = note
                         updated.status = newStatus
+                        WindowManager.shared.updateNoteStatus(for: note.id, status: newStatus)
                         store.updateNote(updated, immediateSave: true)
                     }
                 ))
@@ -243,19 +269,23 @@ struct AllNotesView: View {
                         Label("Claude", systemImage: "brain.head.profile")
                     }
                 } label: {
-                    HStack(spacing: 2) {
+                    HStack(spacing: 3) {
                         Image(systemName: "paperplane.fill")
                             .font(.system(size: 8))
-                        Text("Send")
+                        Text("Send to AI")
                             .font(.system(size: 10, weight: .medium))
                     }
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2.5)
                     .background(note.color.textColor.opacity(0.08))
-                    .foregroundColor(note.color.textColor)
+                    .foregroundColor(note.color.textColor.opacity(0.85))
                     .clipShape(Capsule())
+                    .overlay(
+                        Capsule()
+                            .stroke(note.color.textColor.opacity(0.15), lineWidth: 0.8)
+                    )
                 }
-                .menuStyle(.borderlessButton)
+                .buttonStyle(.plain)
                 .fixedSize()
 
                 Spacer()
@@ -295,5 +325,32 @@ struct AllNotesView: View {
                 .stroke(Color.black.opacity(0.12), lineWidth: 1)
         )
         .shadow(color: Color.black.opacity(0.09), radius: 4, x: 0, y: 2)
+    }
+
+    private func exportAction() {
+        let savePanel = NSSavePanel()
+        savePanel.allowedContentTypes = [.json]
+        savePanel.canCreateDirectories = true
+        savePanel.nameFieldStringValue = "FloatingNotes_Backup.json"
+        savePanel.title = "Export Floating Notes"
+
+        NSApp.activate(ignoringOtherApps: true)
+        if savePanel.runModal() == .OK, let url = savePanel.url {
+            try? store.exportNotes(to: url)
+        }
+    }
+
+    private func importAction() {
+        let openPanel = NSOpenPanel()
+        openPanel.allowedContentTypes = [.json]
+        openPanel.allowsMultipleSelection = false
+        openPanel.canChooseDirectories = false
+        openPanel.canChooseFiles = true
+        openPanel.title = "Import Floating Notes"
+
+        NSApp.activate(ignoringOtherApps: true)
+        if openPanel.runModal() == .OK, let url = openPanel.url {
+            try? store.importNotes(from: url, append: true)
+        }
     }
 }

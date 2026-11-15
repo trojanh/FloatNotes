@@ -2,16 +2,16 @@ import SwiftUI
 import AppKit
 
 struct NoteCardView: View {
-    @Binding var note: StickyNote
+    @ObservedObject var noteModel: NoteObservable
     var onDelete: () -> Void
     var onTogglePin: () -> Void
 
     @State private var showOptions: Bool = false
-    @State private var showCopiedAlert: Bool = false
+    @State private var showAIMenu: Bool = false
 
     var currentNSFont: NSFont {
-        let size = CGFloat(note.fontSize)
-        switch note.fontDesign {
+        let size = CGFloat(noteModel.note.fontSize)
+        switch noteModel.note.fontDesign {
         case .standard:
             return NSFont.systemFont(ofSize: size)
         case .rounded:
@@ -32,7 +32,7 @@ struct NoteCardView: View {
     }
 
     var currentNSColor: NSColor {
-        switch note.color {
+        switch noteModel.note.color {
         case .graphite:
             return NSColor.white.withAlphaComponent(0.95)
         default:
@@ -46,17 +46,17 @@ struct NoteCardView: View {
             HStack(spacing: 8) {
                 // Pin Button
                 Button(action: onTogglePin) {
-                    Image(systemName: note.isPinnedOnTop ? "pin.fill" : "pin.slash")
+                    Image(systemName: noteModel.note.isPinnedOnTop ? "pin.fill" : "pin.slash")
                         .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(note.isPinnedOnTop ? .accentColor : note.color.secondaryTextColor)
+                        .foregroundColor(noteModel.note.isPinnedOnTop ? .accentColor : noteModel.note.color.secondaryTextColor)
                         .padding(4)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .help(note.isPinnedOnTop ? "Always on Top (Active)" : "Standard Window Level")
+                .help(noteModel.note.isPinnedOnTop ? "Always on Top (Active)" : "Standard Window Level")
 
                 // Status Badge (todo, doing, done in lower case with status-colored text)
-                StatusBadgeView(status: $note.status)
+                StatusBadgeView(status: $noteModel.note.status)
 
                 Spacer()
 
@@ -64,7 +64,7 @@ struct NoteCardView: View {
                 Button(action: { showOptions.toggle() }) {
                     Image(systemName: "slider.horizontal.3")
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(note.color.secondaryTextColor)
+                        .foregroundColor(noteModel.note.color.secondaryTextColor)
                         .padding(4)
                         .contentShape(Rectangle())
                 }
@@ -78,7 +78,7 @@ struct NoteCardView: View {
                 Button(action: onDelete) {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 13))
-                        .foregroundColor(note.color.secondaryTextColor.opacity(0.75))
+                        .foregroundColor(noteModel.note.color.secondaryTextColor.opacity(0.75))
                         .padding(2)
                         .contentShape(Rectangle())
                 }
@@ -91,7 +91,7 @@ struct NoteCardView: View {
 
             // Plain text editor with smart bullet / checklist support
             CustomTextEditor(
-                text: $note.text,
+                text: $noteModel.note.text,
                 font: currentNSFont,
                 textColor: currentNSColor
             )
@@ -103,13 +103,13 @@ struct NoteCardView: View {
                 .opacity(0.15)
                 .padding(.horizontal, 8)
 
-            // Always Visible Bottom Footer: List controls, Font controls & Send to AI
+            // Always Visible Bottom Footer: List controls, Font controls & Seamless AI Send
             HStack(spacing: 8) {
                 // Checklist button
                 Button(action: insertChecklist) {
                     Image(systemName: "checklist")
                         .font(.system(size: 11))
-                        .foregroundColor(note.color.secondaryTextColor)
+                        .foregroundColor(noteModel.note.color.secondaryTextColor)
                         .padding(3)
                         .contentShape(Rectangle())
                 }
@@ -120,7 +120,7 @@ struct NoteCardView: View {
                 Button(action: insertBullet) {
                     Image(systemName: "list.bullet")
                         .font(.system(size: 11))
-                        .foregroundColor(note.color.secondaryTextColor)
+                        .foregroundColor(noteModel.note.color.secondaryTextColor)
                         .padding(3)
                         .contentShape(Rectangle())
                 }
@@ -129,11 +129,11 @@ struct NoteCardView: View {
 
                 // Font size decrement
                 Button(action: {
-                    if note.fontSize > 11 { note.fontSize -= 1 }
+                    if noteModel.note.fontSize > 11 { noteModel.note.fontSize -= 1 }
                 }) {
                     Text("A-")
                         .font(.system(size: 10, weight: .bold))
-                        .foregroundColor(note.color.secondaryTextColor)
+                        .foregroundColor(noteModel.note.color.secondaryTextColor)
                         .padding(2)
                         .contentShape(Rectangle())
                 }
@@ -142,11 +142,11 @@ struct NoteCardView: View {
 
                 // Font size increment
                 Button(action: {
-                    if note.fontSize < 32 { note.fontSize += 1 }
+                    if noteModel.note.fontSize < 32 { noteModel.note.fontSize += 1 }
                 }) {
                     Text("A+")
                         .font(.system(size: 10, weight: .bold))
-                        .foregroundColor(note.color.secondaryTextColor)
+                        .foregroundColor(noteModel.note.color.secondaryTextColor)
                         .padding(2)
                         .contentShape(Rectangle())
                 }
@@ -155,35 +155,72 @@ struct NoteCardView: View {
 
                 Spacer()
 
-                // Send to AI Menu
-                Menu {
-                    Button(action: {
-                        AIService.sendToChatGPT(text: note.text)
-                    }) {
-                        Label("ChatGPT", systemImage: "sparkles")
-                    }
-
-                    Button(action: {
-                        AIService.sendToClaude(text: note.text)
-                    }) {
-                        Label("Claude", systemImage: "brain.head.profile")
-                    }
-                } label: {
-                    HStack(spacing: 3) {
+                // Seamless Send to AI button that perfectly blends with card palette
+                Button(action: {
+                    showAIMenu.toggle()
+                }) {
+                    HStack(spacing: 4) {
                         Image(systemName: "paperplane.fill")
                             .font(.system(size: 9))
                         Text("Send to AI")
                             .font(.system(size: 10, weight: .medium))
                     }
+                    .foregroundColor(noteModel.note.color.textColor.opacity(0.85))
                     .padding(.horizontal, 7)
                     .padding(.vertical, 3.5)
-                    .background(note.color.textColor.opacity(0.08))
-                    .foregroundColor(note.color.textColor)
+                    .background(noteModel.note.color.textColor.opacity(0.08))
                     .clipShape(Capsule())
+                    .overlay(
+                        Capsule()
+                            .stroke(noteModel.note.color.textColor.opacity(0.18), lineWidth: 0.8)
+                    )
                 }
-                .menuStyle(.borderlessButton)
-                .fixedSize()
+                .buttonStyle(.plain)
                 .help("Send Note Content to ChatGPT or Claude")
+                .popover(isPresented: $showAIMenu, arrowEdge: .top) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Send note to")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .padding(.bottom, 2)
+
+                        Button(action: {
+                            AIService.sendToChatGPT(text: noteModel.note.text)
+                            showAIMenu = false
+                        }) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "sparkles")
+                                    .foregroundColor(.purple)
+                                Text("ChatGPT")
+                                    .font(.system(size: 12))
+                                Spacer()
+                            }
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 5)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+
+                        Button(action: {
+                            AIService.sendToClaude(text: noteModel.note.text)
+                            showAIMenu = false
+                        }) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "brain.head.profile")
+                                    .foregroundColor(.orange)
+                                Text("Claude")
+                                    .font(.system(size: 12))
+                                Spacer()
+                            }
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 5)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(10)
+                    .frame(width: 150)
+                }
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
@@ -196,8 +233,8 @@ struct NoteCardView: View {
                     material: .hudWindow,
                     blendingMode: .behindWindow
                 )
-                note.color.swiftUIColor
-                    .opacity(note.opacity)
+                noteModel.note.color.swiftUIColor
+                    .opacity(noteModel.note.opacity)
             }
         )
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
@@ -209,22 +246,22 @@ struct NoteCardView: View {
     }
 
     private func insertChecklist() {
-        if note.text.isEmpty {
-            note.text = "- [ ] "
-        } else if note.text.hasSuffix("\n") {
-            note.text += "- [ ] "
+        if noteModel.note.text.isEmpty {
+            noteModel.note.text = "- [ ] "
+        } else if noteModel.note.text.hasSuffix("\n") {
+            noteModel.note.text += "- [ ] "
         } else {
-            note.text += "\n- [ ] "
+            noteModel.note.text += "\n- [ ] "
         }
     }
 
     private func insertBullet() {
-        if note.text.isEmpty {
-            note.text = "• "
-        } else if note.text.hasSuffix("\n") {
-            note.text += "• "
+        if noteModel.note.text.isEmpty {
+            noteModel.note.text = "• "
+        } else if noteModel.note.text.hasSuffix("\n") {
+            noteModel.note.text += "• "
         } else {
-            note.text += "\n• "
+            noteModel.note.text += "\n• "
         }
     }
 
@@ -247,10 +284,10 @@ struct NoteCardView: View {
                             .frame(width: 22, height: 22)
                             .overlay(
                                 Circle()
-                                    .stroke(note.color == c ? Color.accentColor : Color.black.opacity(0.2), lineWidth: note.color == c ? 2 : 1)
+                                    .stroke(noteModel.note.color == c ? Color.accentColor : Color.black.opacity(0.2), lineWidth: noteModel.note.color == c ? 2 : 1)
                             )
                             .onTapGesture {
-                                note.color = c
+                                noteModel.note.color = c
                             }
                     }
                 }
@@ -264,7 +301,7 @@ struct NoteCardView: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
 
-                Picker("Font", selection: $note.fontDesign) {
+                Picker("Font", selection: $noteModel.note.fontDesign) {
                     ForEach(NoteFontDesign.allCases) { design in
                         Text(design.rawValue).tag(design)
                     }
@@ -279,11 +316,11 @@ struct NoteCardView: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
                     Spacer()
-                    Text("\(Int(note.opacity * 100))%")
+                    Text("\(Int(noteModel.note.opacity * 100))%")
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 }
-                Slider(value: $note.opacity, in: 0.4...1.0)
+                Slider(value: $noteModel.note.opacity, in: 0.4...1.0)
             }
         }
         .padding(14)
