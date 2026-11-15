@@ -188,11 +188,15 @@ final class WindowManager: NSObject, NSWindowDelegate {
 
         let window = NSWindow(
             contentRect: NSRect(x: 250, y: 250, width: 720, height: 500),
-            styleMask: [.titled, .closable, .resizable, .miniaturizable],
+            styleMask: [.titled, .closable, .resizable, .miniaturizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
-        window.title = "All Sticky Notes"
+        window.title = ""
+        window.titlebarAppearsTransparent = true
+        window.titleVisibility = .hidden
+        window.isOpaque = false
+        window.backgroundColor = .clear
         window.center()
         window.contentView = NSHostingView(rootView: allNotesView)
         window.isReleasedWhenClosed = false

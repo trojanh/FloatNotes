@@ -27,176 +27,268 @@ struct AllNotesView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Modern Header bar
-            HStack(spacing: 12) {
-                HStack(spacing: 8) {
-                    Image(systemName: "note.text")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.accentColor)
-                    Text("All Sticky Notes")
-                        .font(.system(size: 15, weight: .bold))
-                    Text("(\(store.notes.count))")
-                        .font(.system(size: 12))
-                        .foregroundColor(.secondary)
-                }
+        ZStack {
+            // Full-window Deep Frosted Glass Blur & Dynamic Aurora Gradient
+            VisualEffectBackground(material: .underWindowBackground, blendingMode: .behindWindow)
 
-                Spacer()
+            LinearGradient(
+                colors: [
+                    Color.purple.opacity(0.08),
+                    Color.blue.opacity(0.05),
+                    Color.clear,
+                    Color.indigo.opacity(0.06)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
 
-                // Export & Import Buttons
-                Button(action: exportAction) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "square.and.arrow.up")
-                            .font(.system(size: 11))
-                        Text("Export")
-                            .font(.system(size: 11))
+            VStack(spacing: 0) {
+                // Frosted Glass Top Toolbar
+                HStack(spacing: 12) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "note.text")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundStyle(
+                                LinearGradient(
+                                    colors: [Color.blue, Color.purple],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                        Text("FloatNotes")
+                            .font(.system(size: 16, weight: .bold, design: .rounded))
+
+                        Text("\(store.notes.count)")
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.primary.opacity(0.06))
+                            .clipShape(Capsule())
                     }
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .help("Export all notes to a JSON file")
 
-                Button(action: importAction) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "square.and.arrow.down")
-                            .font(.system(size: 11))
-                        Text("Import")
-                            .font(.system(size: 11))
+                    Spacer()
+
+                    // Export & Import Frosted Glass Pills
+                    HStack(spacing: 6) {
+                        Button(action: exportAction) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "square.and.arrow.up")
+                                    .font(.system(size: 10))
+                                Text("Export")
+                                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                            }
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.white.opacity(0.12))
+                            .clipShape(Capsule())
+                            .overlay(
+                                Capsule()
+                                    .stroke(Color.white.opacity(0.25), lineWidth: 0.8)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .help("Export all notes to a JSON file")
+
+                        Button(action: importAction) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "square.and.arrow.down")
+                                    .font(.system(size: 10))
+                                Text("Import")
+                                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                            }
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.white.opacity(0.12))
+                            .clipShape(Capsule())
+                            .overlay(
+                                Capsule()
+                                    .stroke(Color.white.opacity(0.25), lineWidth: 0.8)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .help("Import notes from a JSON backup file")
                     }
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .help("Import notes from a JSON backup file")
 
-                // Status Filter
-                Picker("", selection: $filterStatus) {
-                    Text("All Status").tag("ALL")
-                    ForEach(NoteStatus.allCases) { status in
-                        Text(status.shortLabel).tag(status.rawValue)
+                    // Status Filter Segmented Pill
+                    HStack(spacing: 2) {
+                        filterButton(title: "All", tag: "ALL")
+                        ForEach(NoteStatus.allCases) { status in
+                            filterButton(title: status.shortLabel, tag: status.rawValue)
+                        }
                     }
-                }
-                .labelsHidden()
-                .frame(width: 105)
+                    .padding(3)
+                    .background(Color.black.opacity(0.06))
+                    .clipShape(Capsule())
+                    .overlay(
+                        Capsule()
+                            .stroke(Color.white.opacity(0.2), lineWidth: 0.8)
+                    )
 
-                // New Note CTA: Creates note directly inside All Notes view (unopened as a floating window until user clicks 'Open')
-                Button(action: {
-                    _ = store.createNote(initialText: "New Note", isVisible: false)
-                }) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "plus")
-                            .font(.system(size: 11, weight: .bold))
-                        Text("New Note")
-                            .font(.system(size: 12, weight: .medium))
-                    }
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.regular)
-                .help("Add a new note to this collection")
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 14)
-            .background(Color(NSColor.windowBackgroundColor))
-
-            Divider()
-
-            // Search Bar
-            HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 13))
-                    .foregroundColor(.secondary)
-                TextField("Search in notes...", text: $searchText)
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 13))
-                if !searchText.isEmpty {
-                    Button(action: { searchText = "" }) {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 12))
-                            .foregroundColor(.secondary)
+                    // Modern Glowing New Note CTA
+                    Button(action: {
+                        _ = store.createNote(initialText: "New Note", isVisible: false)
+                    }) {
+                        HStack(spacing: 5) {
+                            Image(systemName: "plus")
+                                .font(.system(size: 11, weight: .bold))
+                            Text("New Note")
+                                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(
+                            LinearGradient(
+                                colors: [Color.blue, Color.purple],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .clipShape(Capsule())
+                        .overlay(
+                            Capsule()
+                                .stroke(Color.white.opacity(0.35), lineWidth: 1)
+                        )
+                        .shadow(color: Color.blue.opacity(0.3), radius: 6, x: 0, y: 2)
                     }
                     .buttonStyle(.plain)
                 }
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 8)
-            .background(Color(NSColor.controlBackgroundColor))
+                .padding(.horizontal, 22)
+                .padding(.top, 18)
+                .padding(.bottom, 14)
 
-            Divider()
-
-            // Scrollable Content
-            ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    // Pinned Section
-                    if !pinnedNotes.isEmpty {
-                        VStack(alignment: .leading, spacing: 10) {
-                            HStack(spacing: 6) {
-                                Image(systemName: "pin.fill")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.accentColor)
-                                Text("Always On Top (Pinned)")
-                                    .font(.system(size: 13, weight: .semibold))
-                                Text("• \(pinnedNotes.count)")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.secondary)
-                            }
-
-                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 220, maximum: 260), spacing: 14)], spacing: 14) {
-                                ForEach(pinnedNotes) { note in
-                                    noteGridCard(note: note)
-                                }
-                            }
-                        }
-                    }
-
-                    // Unpinned Section
-                    if !unpinnedNotes.isEmpty {
-                        VStack(alignment: .leading, spacing: 10) {
-                            HStack(spacing: 6) {
-                                Image(systemName: "pin.slash")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.secondary)
-                                Text("Standard Window Level")
-                                    .font(.system(size: 13, weight: .semibold))
-                                Text("• \(unpinnedNotes.count)")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.secondary)
-                            }
-
-                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 220, maximum: 260), spacing: 14)], spacing: 14) {
-                                ForEach(unpinnedNotes) { note in
-                                    noteGridCard(note: note)
-                                }
-                            }
-                        }
-                    }
-
-                    if filteredNotes.isEmpty {
-                        VStack(spacing: 10) {
-                            Image(systemName: "doc.text.magnifyingglass")
-                                .font(.system(size: 34))
-                                .foregroundColor(.secondary.opacity(0.7))
-                            Text("No matching notes")
-                                .font(.headline)
+                // Frosted Glass Search Capsule
+                HStack(spacing: 8) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.secondary)
+                    TextField("Search notes, checklists, code...", text: $searchText)
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 12))
+                    if !searchText.isEmpty {
+                        Button(action: { searchText = "" }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 11))
                                 .foregroundColor(.secondary)
-                            Text("Try adjusting your search or status filter.")
-                                .font(.caption)
-                                .foregroundColor(.secondary.opacity(0.8))
                         }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 60)
+                        .buttonStyle(.plain)
                     }
                 }
-                .padding(20)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 7)
+                .background(Color.white.opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(Color.white.opacity(0.25), lineWidth: 0.8)
+                )
+                .padding(.horizontal, 22)
+                .padding(.bottom, 14)
+
+                // Content Grid Scroll Area
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 26) {
+                        // Pinned Section
+                        if !pinnedNotes.isEmpty {
+                            VStack(alignment: .leading, spacing: 12) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "pin.fill")
+                                        .font(.system(size: 11))
+                                        .foregroundColor(.accentColor)
+                                    Text("Always On Top")
+                                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                                    Text("• \(pinnedNotes.count)")
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundColor(.secondary)
+                                }
+
+                                LazyVGrid(columns: [GridItem(.adaptive(minimum: 220, maximum: 260), spacing: 16)], spacing: 16) {
+                                    ForEach(pinnedNotes) { note in
+                                        noteGridCard(note: note)
+                                    }
+                                }
+                            }
+                        }
+
+                        // Unpinned Section
+                        if !unpinnedNotes.isEmpty {
+                            VStack(alignment: .leading, spacing: 12) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "pin.slash")
+                                        .font(.system(size: 11))
+                                        .foregroundColor(.secondary)
+                                    Text("Standard Window Level")
+                                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                                    Text("• \(unpinnedNotes.count)")
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundColor(.secondary)
+                                }
+
+                                LazyVGrid(columns: [GridItem(.adaptive(minimum: 220, maximum: 260), spacing: 16)], spacing: 16) {
+                                    ForEach(unpinnedNotes) { note in
+                                        noteGridCard(note: note)
+                                    }
+                                }
+                            }
+                        }
+
+                        if filteredNotes.isEmpty {
+                            VStack(spacing: 12) {
+                                Image(systemName: "sparkles")
+                                    .font(.system(size: 38))
+                                    .foregroundStyle(
+                                        LinearGradient(
+                                            colors: [Color.blue.opacity(0.6), Color.purple.opacity(0.6)],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                                Text("No notes found")
+                                    .font(.headline)
+                                    .foregroundColor(.secondary)
+                                Text("Create a new note or adjust your search filter.")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary.opacity(0.8))
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 70)
+                        }
+                    }
+                    .padding(.horizontal, 22)
+                    .padding(.bottom, 22)
+                }
             }
         }
-        .frame(minWidth: 680, minHeight: 480)
-        .background(Color(NSColor.underPageBackgroundColor))
+        .frame(minWidth: 700, minHeight: 500)
+    }
+
+    private func filterButton(title: String, tag: String) -> some View {
+        Button(action: {
+            withAnimation(.easeInOut(duration: 0.15)) {
+                filterStatus = tag
+            }
+        }) {
+            Text(title)
+                .font(.system(size: 11, weight: filterStatus == tag ? .bold : .medium, design: .rounded))
+                .foregroundColor(filterStatus == tag ? .white : .secondary)
+                .padding(.horizontal, 9)
+                .padding(.vertical, 4)
+                .background(
+                    filterStatus == tag ?
+                    AnyView(
+                        LinearGradient(colors: [Color.blue, Color.purple], startPoint: .topLeading, endPoint: .bottomTrailing)
+                    ) : AnyView(Color.clear)
+                )
+                .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
     }
 
     private func noteGridCard(note: StickyNote) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Card Header: Consistent layout with Floating Note! (Pin on left, then Status, then Delete on right)
+            // Header Bar
             HStack(spacing: 6) {
-                // Pin toggle (Matching left position)
+                // Pin Button
                 Button(action: {
                     var updated = note
                     updated.isPinnedOnTop.toggle()
@@ -206,13 +298,13 @@ struct AllNotesView: View {
                     Image(systemName: note.isPinnedOnTop ? "pin.fill" : "pin.slash")
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundColor(note.isPinnedOnTop ? .accentColor : note.color.secondaryTextColor)
-                        .padding(3)
+                        .padding(4)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .help(note.isPinnedOnTop ? "Unpin from Always on Top" : "Pin to Always on Top")
 
-                // Status Badge (todo, doing, done)
+                // Status Badge
                 StatusBadgeView(status: Binding(
                     get: { note.status },
                     set: { newStatus in
@@ -225,13 +317,13 @@ struct AllNotesView: View {
 
                 Spacer()
 
-                // Delete with confirmation popover
+                // Delete Button with Popover
                 Button(action: {
                     noteToDelete = note.id
                 }) {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 12))
-                        .foregroundColor(note.color.secondaryTextColor.opacity(0.7))
+                        .foregroundColor(note.color.secondaryTextColor.opacity(0.6))
                         .padding(3)
                         .contentShape(Rectangle())
                 }
@@ -282,7 +374,7 @@ struct AllNotesView: View {
             .padding(.top, 9)
             .padding(.bottom, 6)
 
-            // Editable Note Text directly in All Notes view!
+            // Editable Note Text with zero opacity container
             TextEditor(text: Binding(
                 get: { note.text },
                 set: { newText in
@@ -301,9 +393,9 @@ struct AllNotesView: View {
                 .opacity(0.12)
                 .padding(.horizontal, 8)
 
-            // Card Footer: AI Send Menu & Open / Close floating state
+            // Card Footer
             HStack(spacing: 6) {
-                // Send to AI Menu
+                // Send to AI Glass Pill Menu
                 Menu {
                     Button(action: {
                         AIService.sendToGemini(text: note.text)
@@ -333,16 +425,16 @@ struct AllNotesView: View {
                         Image(systemName: "paperplane.fill")
                             .font(.system(size: 8))
                         Text("Send to AI")
-                            .font(.system(size: 10, weight: .medium))
+                            .font(.system(size: 10, weight: .medium, design: .rounded))
                     }
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2.5)
-                    .background(note.color.textColor.opacity(0.08))
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(Color.white.opacity(0.18))
                     .foregroundColor(note.color.textColor.opacity(0.85))
                     .clipShape(Capsule())
                     .overlay(
                         Capsule()
-                            .stroke(note.color.textColor.opacity(0.15), lineWidth: 0.8)
+                            .stroke(Color.white.opacity(0.35), lineWidth: 0.8)
                     )
                 }
                 .buttonStyle(.plain)
@@ -350,21 +442,32 @@ struct AllNotesView: View {
 
                 Spacer()
 
-                // Open / Float Note Button
+                // Open / Float Note Button with Glass Gradient
                 Button(action: {
                     onSelectNote(note.id)
                 }) {
-                    HStack(spacing: 3) {
+                    HStack(spacing: 4) {
                         Text(note.isVisible ? "Float" : "Open")
-                            .font(.system(size: 10, weight: .semibold))
+                            .font(.system(size: 10, weight: .bold, design: .rounded))
                         Image(systemName: "arrow.up.forward.app")
-                            .font(.system(size: 9))
+                            .font(.system(size: 8, weight: .bold))
                     }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(Color.accentColor)
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 3.5)
+                    .background(
+                        LinearGradient(
+                            colors: [Color.blue, Color.purple],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
                     .foregroundColor(.white)
                     .clipShape(Capsule())
+                    .overlay(
+                        Capsule()
+                            .stroke(Color.white.opacity(0.4), lineWidth: 0.8)
+                    )
+                    .shadow(color: Color.blue.opacity(0.3), radius: 3, x: 0, y: 1)
                 }
                 .buttonStyle(.plain)
                 .help(note.isVisible ? "Bring floating card to front" : "Open as floating note")
@@ -376,16 +479,44 @@ struct AllNotesView: View {
         .frame(height: 165)
         .background(
             ZStack {
+                // Frosted Glass Layer
+                VisualEffectBackground(material: .popover, blendingMode: .behindWindow)
+
+                // Translucent Pastel Tint
                 note.color.swiftUIColor
-                    .opacity(0.92)
+                    .opacity(0.70)
+
+                // Glass Specular Glare
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        Color.white.opacity(0.25),
+                        Color.white.opacity(0.04),
+                        Color.black.opacity(0.04)
+                    ]),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
             }
         )
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(Color.black.opacity(0.12), lineWidth: 1)
+            // Specular Rim Border
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(
+                    LinearGradient(
+                        gradient: Gradient(colors: [
+                            Color.white.opacity(0.70),
+                            Color.white.opacity(0.20),
+                            Color.black.opacity(0.08),
+                            Color.white.opacity(0.35)
+                        ]),
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
         )
-        .shadow(color: Color.black.opacity(0.09), radius: 4, x: 0, y: 2)
+        .shadow(color: Color.black.opacity(0.12), radius: 8, x: 0, y: 3)
     }
 
     private func exportAction() {

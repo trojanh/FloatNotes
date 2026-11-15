@@ -239,25 +239,42 @@ struct NoteCardView: View {
 
                 Spacer()
 
-                // Configurable Send to AI button
+                // Configurable Send to AI button with modern Apple Glass Pill styling
                 Button(action: {
                     showAIMenu.toggle()
                 }) {
                     HStack(spacing: 4) {
                         Image(systemName: "paperplane.fill")
-                            .font(.system(size: 9))
+                            .font(.system(size: 8))
                         Text("Send to AI")
-                            .font(.system(size: 10, weight: .medium))
+                            .font(.system(size: 10, weight: .semibold, design: .rounded))
                     }
-                    .foregroundColor(noteModel.note.color.textColor.opacity(0.85))
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 3.5)
-                    .background(noteModel.note.color.textColor.opacity(0.08))
+                    .foregroundColor(noteModel.note.color.textColor.opacity(0.90))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(
+                        ZStack {
+                            Color.white.opacity(0.18)
+                            LinearGradient(
+                                colors: [Color.white.opacity(0.20), Color.clear],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        }
+                    )
                     .clipShape(Capsule())
                     .overlay(
                         Capsule()
-                            .stroke(noteModel.note.color.textColor.opacity(0.18), lineWidth: 0.8)
+                            .stroke(
+                                LinearGradient(
+                                    colors: [Color.white.opacity(0.60), Color.white.opacity(0.15)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ),
+                                lineWidth: 0.8
+                            )
                     )
+                    .shadow(color: Color.black.opacity(0.06), radius: 2, x: 0, y: 1)
                 }
                 .buttonStyle(.plain)
                 .help("Send Note Content to Gemini, ChatGPT, Claude, or Perplexity")
@@ -267,25 +284,59 @@ struct NoteCardView: View {
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
-            .background(Color.black.opacity(0.03))
+            .background(
+                LinearGradient(
+                    colors: [Color.black.opacity(0.01), Color.black.opacity(0.05)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
         }
         .frame(minWidth: 230, minHeight: 200)
         .background(
             ZStack {
+                // Frosted Glass Material
                 VisualEffectBackground(
-                    material: .hudWindow,
+                    material: .popover,
                     blendingMode: .behindWindow
                 )
+
+                // Translucent Pastel Glass Tint Wash
                 noteModel.note.color.swiftUIColor
-                    .opacity(noteModel.note.opacity)
+                    .opacity(max(0.25, noteModel.note.opacity * 0.85))
+
+                // Apple Glass Specular Glare / Reflection
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        Color.white.opacity(0.30),
+                        Color.white.opacity(0.05),
+                        Color.black.opacity(0.04)
+                    ]),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
             }
         )
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color.white.opacity(0.25), lineWidth: 1)
+            // Precision Apple Glass Specular Rim Border
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(
+                    LinearGradient(
+                        gradient: Gradient(colors: [
+                            Color.white.opacity(0.75),
+                            Color.white.opacity(0.25),
+                            Color.black.opacity(0.10),
+                            Color.white.opacity(0.40)
+                        ]),
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
         )
-        .shadow(color: Color.black.opacity(0.18), radius: 10, x: 0, y: 5)
+        .shadow(color: Color.black.opacity(0.16), radius: 16, x: 0, y: 8)
+        .shadow(color: Color.black.opacity(0.06), radius: 3, x: 0, y: 1)
     }
 
     private func insertChecklist() {

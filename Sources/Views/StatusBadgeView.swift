@@ -7,11 +7,11 @@ struct StatusBadgeView: View {
     var badgeColor: Color {
         switch status {
         case .todo:
-            return Color(red: 0.96, green: 0.55, blue: 0.12) // warm amber orange
+            return Color(red: 0.98, green: 0.58, blue: 0.16) // warm amber orange
         case .inProgress:
-            return Color(red: 0.18, green: 0.52, blue: 0.95) // vibrant blue
+            return Color(red: 0.22, green: 0.58, blue: 0.98) // vibrant blue
         case .done:
-            return Color(red: 0.15, green: 0.68, blue: 0.38) // emerald green
+            return Color(red: 0.20, green: 0.72, blue: 0.42) // emerald green
         }
     }
 
@@ -19,32 +19,53 @@ struct StatusBadgeView: View {
         Button(action: {
             showMenu.toggle()
         }) {
-            HStack(spacing: 4) {
+            HStack(spacing: 5) {
                 Circle()
                     .fill(badgeColor)
                     .frame(width: 6, height: 6)
+                    .shadow(color: badgeColor.opacity(0.6), radius: 3, x: 0, y: 0)
+
                 Text(status.shortLabel)
                     .font(.system(size: 11, weight: .semibold, design: .rounded))
                     .foregroundColor(badgeColor)
+
                 Image(systemName: "chevron.down")
-                    .font(.system(size: 8, weight: .bold))
-                    .foregroundColor(badgeColor.opacity(0.8))
+                    .font(.system(size: 7, weight: .bold))
+                    .foregroundColor(badgeColor.opacity(0.75))
             }
-            .padding(.horizontal, 7)
-            .padding(.vertical, 3)
-            .background(badgeColor.opacity(0.14))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3.5)
+            .background(
+                ZStack {
+                    badgeColor.opacity(0.12)
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.15), Color.clear],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                }
+            )
             .clipShape(Capsule())
             .overlay(
                 Capsule()
-                    .stroke(badgeColor.opacity(0.35), lineWidth: 0.8)
+                    .stroke(
+                        LinearGradient(
+                            colors: [Color.white.opacity(0.4), badgeColor.opacity(0.35)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 0.8
+                    )
             )
         }
         .buttonStyle(.plain)
         .popover(isPresented: $showMenu, arrowEdge: .bottom) {
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 3) {
                 ForEach(NoteStatus.allCases) { s in
                     Button(action: {
-                        status = s
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            status = s
+                        }
                         showMenu = false
                     }) {
                         HStack(spacing: 8) {
@@ -76,9 +97,9 @@ struct StatusBadgeView: View {
 
     private func color(for s: NoteStatus) -> Color {
         switch s {
-        case .todo: return Color(red: 0.96, green: 0.55, blue: 0.12)
-        case .inProgress: return Color(red: 0.18, green: 0.52, blue: 0.95)
-        case .done: return Color(red: 0.15, green: 0.68, blue: 0.38)
+        case .todo: return Color(red: 0.98, green: 0.58, blue: 0.16)
+        case .inProgress: return Color(red: 0.22, green: 0.58, blue: 0.98)
+        case .done: return Color(red: 0.20, green: 0.72, blue: 0.42)
         }
     }
 }
