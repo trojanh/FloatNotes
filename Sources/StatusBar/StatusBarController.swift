@@ -123,6 +123,13 @@ final class StatusBarController: NSObject {
         noteStore.toggleAllNotesVisibility()
     }
 
+    @objc private func stackPinnedNotesAction() {
+        if noteStore.areAllNotesHidden {
+            noteStore.showAllNotes()
+        }
+        WindowManager.shared.reorganizePinnedNotes()
+    }
+
     @objc private func exportNotesAction() {
         let savePanel = NSSavePanel()
         savePanel.allowedContentTypes = [.json]
@@ -185,6 +192,20 @@ extension StatusBarController: NSMenuDelegate {
         toggleItem.keyEquivalentModifierMask = [.option, .command]
         toggleItem.target = self
         menu.addItem(toggleItem)
+
+        // Stack Pinned Notes item
+        let pinnedCount = noteStore.notes.filter { $0.isPinnedOnTop }.count
+        let stackItem = NSMenuItem(
+            title: pinnedCount > 0 ? "Stack Pinned Notes (\(pinnedCount))" : "Stack Pinned Notes",
+            action: #selector(stackPinnedNotesAction),
+            keyEquivalent: "s"
+        )
+        stackItem.keyEquivalentModifierMask = [.command, .shift]
+        stackItem.target = self
+        if let stackIcon = NSImage(systemSymbolName: "square.stack.3d.down.right.fill", accessibilityDescription: nil) {
+            stackItem.image = stackIcon
+        }
+        menu.addItem(stackItem)
 
         menu.addItem(NSMenuItem.separator())
 
