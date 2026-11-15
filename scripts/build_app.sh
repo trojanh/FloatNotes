@@ -20,6 +20,9 @@ mkdir -p "$RESOURCES_DIR"
 
 cp "$DIR/.build/release/FloatingNotes" "$MACOS_DIR/FloatingNotes"
 cp "$DIR/Resources/Info.plist" "$APP_DIR/Contents/Info.plist"
+if [ -f "$DIR/Resources/AppIcon.icns" ]; then
+    cp "$DIR/Resources/AppIcon.icns" "$RESOURCES_DIR/AppIcon.icns"
+fi
 
 echo "✅ App bundle created at: $APP_DIR"
 echo "You can launch it by running: open \"$APP_DIR\""

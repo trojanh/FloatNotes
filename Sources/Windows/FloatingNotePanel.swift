@@ -7,7 +7,7 @@ final class FloatingNotePanel: NSPanel {
     init(note: StickyNote, rootView: AnyView) {
         self.noteId = note.id
 
-        // Borderless, non-activating panel that supports smooth dragging and controls
+        // Standard borderless floating panel
         super.init(
             contentRect: NSRect(x: note.x, y: note.y, width: note.width, height: note.height),
             styleMask: [.nonactivatingPanel, .resizable, .fullSizeContentView],
@@ -20,13 +20,13 @@ final class FloatingNotePanel: NSPanel {
         self.isOpaque = false
         self.backgroundColor = .clear
         self.hasShadow = true
-        self.minSize = NSSize(width: 180, height: 180)
+        self.minSize = NSSize(width: 200, height: 180)
 
         // Float across spaces/virtual desktops and full-screen apps
+        // NOTE: .stationary was causing windows to disappear when dragged across spaces or repositioned!
         self.collectionBehavior = [
             .canJoinAllSpaces,
-            .fullScreenAuxiliary,
-            .stationary
+            .fullScreenAuxiliary
         ]
 
         updateLevel(isPinned: note.isPinnedOnTop)

@@ -41,7 +41,12 @@ final class WindowManager: NSObject, NSWindowDelegate {
         for note in notes {
             if let obs = noteObservables[note.id] {
                 // Update observable model if changed from elsewhere (e.g. from AllNotesView)
-                if obs.note != note {
+                if obs.note.status != note.status ||
+                   obs.note.color != note.color ||
+                   obs.note.fontSize != note.fontSize ||
+                   obs.note.fontDesign != note.fontDesign ||
+                   obs.note.opacity != note.opacity ||
+                   obs.note.isPinnedOnTop != note.isPinnedOnTop {
                     obs.note = note
                 }
             }
