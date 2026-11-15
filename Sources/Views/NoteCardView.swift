@@ -9,6 +9,7 @@ struct NoteCardView: View {
     @State private var showOptions: Bool = false
     @State private var showAIMenu: Bool = false
     @State private var showCopiedBanner: Bool = false
+    @State private var showDeleteConfirmation: Bool = false
     @ObservedObject private var aiService = AIService.shared
 
     var currentNSFont: NSFont {
@@ -89,8 +90,10 @@ struct NoteCardView: View {
                     noteOptionsPopover
                 }
 
-                // Delete / Close button
-                Button(action: onDelete) {
+                // Delete / Close button with confirmation popover
+                Button(action: {
+                    showDeleteConfirmation = true
+                }) {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 13))
                         .foregroundColor(noteModel.note.color.secondaryTextColor.opacity(0.75))
@@ -99,6 +102,42 @@ struct NoteCardView: View {
                 }
                 .buttonStyle(.plain)
                 .help("Delete Sticky Note")
+                .popover(isPresented: $showDeleteConfirmation, arrowEdge: .bottom) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Delete Sticky Note?")
+                            .font(.system(size: 12, weight: .bold))
+
+                        Text("This action cannot be undone.")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+
+                        HStack(spacing: 8) {
+                            Button("Cancel") {
+                                showDeleteConfirmation = false
+                            }
+                            .buttonStyle(.plain)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.primary.opacity(0.06))
+                            .clipShape(RoundedRectangle(cornerRadius: 6))
+
+                            Spacer()
+
+                            Button("Delete") {
+                                showDeleteConfirmation = false
+                                onDelete()
+                            }
+                            .buttonStyle(.plain)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(Color.red)
+                            .foregroundColor(.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                        }
+                    }
+                    .padding(12)
+                    .frame(width: 200)
+                }
             }
             .padding(.horizontal, 10)
             .padding(.top, 9)

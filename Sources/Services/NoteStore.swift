@@ -60,13 +60,14 @@ final class NoteStore: ObservableObject {
     }
 
     @discardableResult
-    func createNote(initialText: String = "", offset: CGPoint? = nil) -> StickyNote {
+    func createNote(initialText: String = "", isVisible: Bool = true, offset: CGPoint? = nil) -> StickyNote {
         let baseCount = notes.count
         let defaultX = 200.0 + Double((baseCount % 6) * 30)
         let defaultY = 250.0 + Double((baseCount % 6) * 30)
 
         var newNote = StickyNote()
         newNote.text = initialText
+        newNote.isVisible = isVisible
         newNote.x = offset?.x != nil ? Double(offset!.x) : defaultX
         newNote.y = offset?.y != nil ? Double(offset!.y) : defaultY
 

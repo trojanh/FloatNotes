@@ -136,6 +136,13 @@ final class WindowManager: NSObject, NSWindowDelegate {
     }
 
     func focusNote(id: UUID) {
+        if var note = noteStore.notes.first(where: { $0.id == id }) {
+            if !note.isVisible {
+                note.isVisible = true
+                noteStore.updateNote(note, immediateSave: true)
+            }
+        }
+
         if let panel = panels[id] {
             panel.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)

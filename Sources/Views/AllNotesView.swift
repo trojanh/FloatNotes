@@ -8,6 +8,7 @@ struct AllNotesView: View {
 
     @State private var filterStatus: String = "ALL"
     @State private var searchText: String = ""
+    @State private var noteToDelete: UUID? = nil
 
     var filteredNotes: [StickyNote] {
         store.notes.filter { note in
@@ -77,10 +78,9 @@ struct AllNotesView: View {
                 .labelsHidden()
                 .frame(width: 105)
 
-                // New Note CTA
+                // New Note CTA: Creates note directly inside All Notes view (unopened as a floating window until user clicks 'Open')
                 Button(action: {
-                    let created = store.createNote()
-                    onSelectNote(created.id)
+                    _ = store.createNote(initialText: "New Note", isVisible: false)
                 }) {
                     HStack(spacing: 4) {
                         Image(systemName: "plus")
@@ -91,6 +91,7 @@ struct AllNotesView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.regular)
+                .help("Add a new note to this collection")
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 14)
@@ -224,9 +225,9 @@ struct AllNotesView: View {
 
                 Spacer()
 
-                // Delete (Matching right position)
+                // Delete with confirmation popover
                 Button(action: {
-                    store.deleteNote(id: note.id)
+                    noteToDelete = note.id
                 }) {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 12))
@@ -236,25 +237,71 @@ struct AllNotesView: View {
                 }
                 .buttonStyle(.plain)
                 .help("Delete Note")
+                .popover(isPresented: Binding(
+                    get: { noteToDelete == note.id },
+                    set: { if !$0 { noteToDelete = nil } }
+                ), arrowEdge: .bottom) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Delete Sticky Note?")
+                            .font(.system(size: 12, weight: .bold))
+
+                        Text("This note will be permanently removed.")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+
+                        HStack(spacing: 8) {
+                            Button("Cancel") {
+                                noteToDelete = nil
+                            }
+                            .buttonStyle(.plain)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.primary.opacity(0.06))
+                            .clipShape(RoundedRectangle(cornerRadius: 6))
+
+                            Spacer()
+
+                            Button("Delete") {
+                                let id = note.id
+                                noteToDelete = nil
+                                store.deleteNote(id: id)
+                            }
+                            .buttonStyle(.plain)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(Color.red)
+                            .foregroundColor(.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                        }
+                    }
+                    .padding(12)
+                    .frame(width: 200)
+                }
             }
             .padding(.horizontal, 10)
             .padding(.top, 9)
             .padding(.bottom, 6)
 
-            // Note Text Snippet
-            Text(note.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Empty Note..." : note.text)
-                .font(.system(size: 12))
-                .foregroundColor(note.color.textColor)
-                .lineLimit(5)
-                .lineSpacing(2)
-                .padding(.horizontal, 10)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            // Editable Note Text directly in All Notes view!
+            TextEditor(text: Binding(
+                get: { note.text },
+                set: { newText in
+                    var updated = note
+                    updated.text = newText
+                    store.updateNote(updated)
+                }
+            ))
+            .font(.system(size: 12))
+            .foregroundColor(note.color.textColor)
+            .scrollContentBackground(.hidden)
+            .padding(.horizontal, 8)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             Divider()
                 .opacity(0.12)
                 .padding(.horizontal, 8)
 
-            // Card Footer: AI Send Menu (Gemini, ChatGPT, Claude, Perplexity) & Open
+            // Card Footer: AI Send Menu & Open / Close floating state
             HStack(spacing: 6) {
                 // Send to AI Menu
                 Menu {
@@ -303,12 +350,12 @@ struct AllNotesView: View {
 
                 Spacer()
 
-                // Open Floating Note
+                // Open / Float Note Button
                 Button(action: {
                     onSelectNote(note.id)
                 }) {
                     HStack(spacing: 3) {
-                        Text("Open")
+                        Text(note.isVisible ? "Float" : "Open")
                             .font(.system(size: 10, weight: .semibold))
                         Image(systemName: "arrow.up.forward.app")
                             .font(.system(size: 9))
@@ -320,12 +367,13 @@ struct AllNotesView: View {
                     .clipShape(Capsule())
                 }
                 .buttonStyle(.plain)
+                .help(note.isVisible ? "Bring floating card to front" : "Open as floating note")
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
             .background(Color.black.opacity(0.04))
         }
-        .frame(height: 155)
+        .frame(height: 165)
         .background(
             ZStack {
                 note.color.swiftUIColor
