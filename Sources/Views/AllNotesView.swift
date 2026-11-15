@@ -45,10 +45,10 @@ struct AllNotesView: View {
 
             VStack(spacing: 0) {
                 // Frosted Glass Top Toolbar
-                HStack(spacing: 12) {
-                    HStack(spacing: 8) {
+                HStack(spacing: 8) {
+                    HStack(spacing: 6) {
                         Image(systemName: "note.text")
-                            .font(.system(size: 16, weight: .bold))
+                            .font(.system(size: 15, weight: .bold))
                             .foregroundStyle(
                                 LinearGradient(
                                     colors: [Color.blue, Color.purple],
@@ -57,29 +57,33 @@ struct AllNotesView: View {
                                 )
                             )
                         Text("FloatNotes")
-                            .font(.system(size: 16, weight: .bold, design: .rounded))
+                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                            .lineLimit(1)
+                            .fixedSize(horizontal: true, vertical: false)
 
                         Text("\(store.notes.count)")
-                            .font(.system(size: 11, weight: .bold, design: .rounded))
-                            .padding(.horizontal, 6)
+                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .padding(.horizontal, 5)
                             .padding(.vertical, 2)
                             .background(Color.primary.opacity(0.06))
                             .clipShape(Capsule())
                     }
+                    .fixedSize(horizontal: true, vertical: false)
 
-                    Spacer()
+                    Spacer(minLength: 8)
 
                     // Export & Import Frosted Glass Pills
-                    HStack(spacing: 6) {
+                    HStack(spacing: 4) {
                         Button(action: exportAction) {
-                            HStack(spacing: 4) {
+                            HStack(spacing: 3) {
                                 Image(systemName: "square.and.arrow.up")
-                                    .font(.system(size: 10))
+                                    .font(.system(size: 9))
                                 Text("Export")
-                                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                                    .font(.system(size: 10, weight: .medium, design: .rounded))
+                                    .lineLimit(1)
                             }
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 3.5)
                             .background(Color.white.opacity(0.12))
                             .clipShape(Capsule())
                             .overlay(
@@ -88,17 +92,19 @@ struct AllNotesView: View {
                             )
                         }
                         .buttonStyle(.plain)
+                        .fixedSize(horizontal: true, vertical: false)
                         .help("Export all notes to a JSON file")
 
                         Button(action: importAction) {
-                            HStack(spacing: 4) {
+                            HStack(spacing: 3) {
                                 Image(systemName: "square.and.arrow.down")
-                                    .font(.system(size: 10))
+                                    .font(.system(size: 9))
                                 Text("Import")
-                                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                                    .font(.system(size: 10, weight: .medium, design: .rounded))
+                                    .lineLimit(1)
                             }
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 3.5)
                             .background(Color.white.opacity(0.12))
                             .clipShape(Capsule())
                             .overlay(
@@ -107,8 +113,10 @@ struct AllNotesView: View {
                             )
                         }
                         .buttonStyle(.plain)
+                        .fixedSize(horizontal: true, vertical: false)
                         .help("Import notes from a JSON backup file")
                     }
+                    .fixedSize(horizontal: true, vertical: false)
 
                     // Status Filter Segmented Pill
                     HStack(spacing: 2) {
@@ -117,13 +125,14 @@ struct AllNotesView: View {
                             filterButton(title: status.shortLabel, tag: status.rawValue)
                         }
                     }
-                    .padding(3)
+                    .padding(2.5)
                     .background(Color.black.opacity(0.06))
                     .clipShape(Capsule())
                     .overlay(
                         Capsule()
                             .stroke(Color.white.opacity(0.2), lineWidth: 0.8)
                     )
+                    .fixedSize(horizontal: true, vertical: false)
 
                     // Unpin All Button
                     Button(action: {
@@ -131,14 +140,15 @@ struct AllNotesView: View {
                             WindowManager.shared.unpinAllNotes()
                         }
                     }) {
-                        HStack(spacing: 4) {
+                        HStack(spacing: 3) {
                             Image(systemName: "pin.slash")
-                                .font(.system(size: 10))
+                                .font(.system(size: 9))
                             Text("Unpin All")
-                                .font(.system(size: 11, weight: .medium, design: .rounded))
+                                .font(.system(size: 10, weight: .medium, design: .rounded))
+                                .lineLimit(1)
                         }
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3.5)
                         .background(Color.white.opacity(0.12))
                         .clipShape(Capsule())
                         .overlay(
@@ -147,14 +157,15 @@ struct AllNotesView: View {
                         )
                     }
                     .buttonStyle(.plain)
+                    .fixedSize(horizontal: true, vertical: false)
                     .help("Unpin all currently pinned floating notes")
 
                     // Default Note Size Settings Popover
                     Button(action: { showSizeSettings.toggle() }) {
                         Image(systemName: "aspectratio")
-                            .font(.system(size: 12))
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 4)
+                            .font(.system(size: 11))
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 3.5)
                             .background(Color.white.opacity(0.12))
                             .clipShape(Capsule())
                             .overlay(
@@ -163,6 +174,7 @@ struct AllNotesView: View {
                             )
                     }
                     .buttonStyle(.plain)
+                    .fixedSize(horizontal: true, vertical: false)
                     .help("Default Note Size & Shape Settings")
                     .popover(isPresented: $showSizeSettings, arrowEdge: .bottom) {
                         defaultSizeSettingsPopover
@@ -172,15 +184,16 @@ struct AllNotesView: View {
                     Button(action: {
                         _ = store.createNote(initialText: "New Note", isVisible: false, isPinned: false)
                     }) {
-                        HStack(spacing: 5) {
+                        HStack(spacing: 4) {
                             Image(systemName: "plus")
-                                .font(.system(size: 11, weight: .bold))
+                                .font(.system(size: 10, weight: .bold))
                             Text("New Note")
-                                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                .lineLimit(1)
                         }
                         .foregroundColor(.white)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4.5)
                         .background(
                             LinearGradient(
                                 colors: [Color.blue, Color.purple],
@@ -196,11 +209,12 @@ struct AllNotesView: View {
                         .shadow(color: Color.blue.opacity(0.3), radius: 6, x: 0, y: 2)
                     }
                     .buttonStyle(.plain)
+                    .fixedSize(horizontal: true, vertical: false)
                     .help("Create a new note in View All (unpinned by default)")
                 }
-                .padding(.horizontal, 22)
-                .padding(.top, 18)
-                .padding(.bottom, 14)
+                .padding(.horizontal, 18)
+                .padding(.top, 14)
+                .padding(.bottom, 10)
 
                 // Frosted Glass Search Capsule
                 HStack(spacing: 8) {
@@ -316,6 +330,8 @@ struct AllNotesView: View {
             Text(title)
                 .font(.system(size: 11, weight: filterStatus == tag ? .bold : .medium, design: .rounded))
                 .foregroundColor(filterStatus == tag ? .white : .secondary)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
                 .padding(.horizontal, 9)
                 .padding(.vertical, 4)
                 .background(
@@ -327,6 +343,7 @@ struct AllNotesView: View {
                 .clipShape(Capsule())
         }
         .buttonStyle(.plain)
+        .fixedSize(horizontal: true, vertical: false)
     }
 
     private func noteGridCard(note: StickyNote) -> some View {
@@ -335,10 +352,8 @@ struct AllNotesView: View {
             HStack(spacing: 5) {
                 // Pin Button
                 Button(action: {
-                    var updated = note
-                    updated.isPinnedOnTop.toggle()
-                    WindowManager.shared.updatePanelLevel(for: note.id, isPinned: updated.isPinnedOnTop)
-                    store.updateNote(updated, immediateSave: true)
+                    let newPinned = !note.isPinnedOnTop
+                    WindowManager.shared.updatePanelLevel(for: note.id, isPinned: newPinned)
                 }) {
                     Image(systemName: note.isPinnedOnTop ? "pin.fill" : "pin.slash")
                         .font(.system(size: 10, weight: .semibold))
@@ -624,6 +639,7 @@ struct AllNotesView: View {
         return Button(action: {
             store.defaultNoteWidth = width
             store.defaultNoteHeight = height
+            WindowManager.shared.updateNoteSize(width: width, height: height)
             showSizeSettings = false
         }) {
             HStack(spacing: 8) {

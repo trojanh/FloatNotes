@@ -35,10 +35,8 @@ final class StatusBarController: NSObject {
     private func updateStatusItem() {
         guard let button = statusItem.button else { return }
 
-        // Clean monochrome icon
-        let config = NSImage.SymbolConfiguration(pointSize: 13, weight: .regular)
-        let icon = NSImage(systemSymbolName: "note.text", accessibilityDescription: "Floating Notes")?.withSymbolConfiguration(config)
-        button.image = icon
+        // Clean, crisp native vector template sticky note icon
+        button.image = createStickyNoteIcon()
         button.imagePosition = .imageLeading
 
         let inProgressCount = noteStore.inProgressNotesCount
@@ -63,6 +61,44 @@ final class StatusBarController: NSObject {
         } else {
             button.title = ""
         }
+    }
+
+    private func createStickyNoteIcon() -> NSImage {
+        let size = NSSize(width: 18, height: 18)
+        let img = NSImage(size: size)
+        img.lockFocus()
+
+        // Outer sticky note rounded container
+        let outerRect = NSRect(x: 1.5, y: 1.5, width: 15, height: 15)
+        let outerPath = NSBezierPath(roundedRect: outerRect, xRadius: 3.0, yRadius: 3.0)
+        NSColor.black.setStroke()
+        outerPath.lineWidth = 1.2
+        outerPath.stroke()
+
+        // Top sticky header bar
+        let ribbon = NSBezierPath()
+        ribbon.move(to: NSPoint(x: 1.5, y: 12.5))
+        ribbon.line(to: NSPoint(x: 16.5, y: 12.5))
+        ribbon.lineWidth = 1.0
+        ribbon.stroke()
+
+        // Note line 1
+        let line1 = NSBezierPath()
+        line1.move(to: NSPoint(x: 4.5, y: 8.5))
+        line1.line(to: NSPoint(x: 13.5, y: 8.5))
+        line1.lineWidth = 1.2
+        line1.stroke()
+
+        // Note line 2
+        let line2 = NSBezierPath()
+        line2.move(to: NSPoint(x: 4.5, y: 5.5))
+        line2.line(to: NSPoint(x: 10.5, y: 5.5))
+        line2.lineWidth = 1.2
+        line2.stroke()
+
+        img.unlockFocus()
+        img.isTemplate = true
+        return img
     }
 
     private func setupMenu() {

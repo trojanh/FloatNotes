@@ -28,11 +28,14 @@ struct StatusBadgeView: View {
                 Text(status.shortLabel)
                     .font(.system(size: 11, weight: .semibold, design: .rounded))
                     .foregroundColor(badgeColor)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
 
                 Image(systemName: "chevron.down")
                     .font(.system(size: 7, weight: .bold))
                     .foregroundColor(badgeColor.opacity(0.75))
             }
+            .fixedSize(horizontal: true, vertical: false)
             .padding(.horizontal, 8)
             .padding(.vertical, 3.5)
             .background(

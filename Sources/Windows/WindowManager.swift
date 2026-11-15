@@ -2,6 +2,20 @@ import AppKit
 import SwiftUI
 import Combine
 
+final class AllNotesWindow: NSWindow {
+    override func sendEvent(_ event: NSEvent) {
+        if event.type == .leftMouseDown && event.clickCount == 2 {
+            let loc = event.locationInWindow
+            // Double click in the top ribbon (height - 65) toggles window zoom / maximize
+            if loc.y >= self.frame.height - 65 {
+                self.zoom(nil)
+                return
+            }
+        }
+        super.sendEvent(event)
+    }
+}
+
 final class WindowManager: NSObject, NSWindowDelegate {
     static let shared = WindowManager()
 
@@ -64,10 +78,54 @@ final class WindowManager: NSObject, NSWindowDelegate {
     }
 
     func updatePanelLevel(for id: UUID, isPinned: Bool) {
-        panels[id]?.updateLevel(isPinned: isPinned)
+        if var note = noteStore.notes.first(where: { $0.id == id }) {
+            note.isPinnedOnTop = isPinned
+            if isPinned && !note.isVisible {
+                note.isVisible = true
+            }
+            noteStore.updateNote(note, immediateSave: true)
+        }
+
         if let obs = noteObservables[id], obs.note.isPinnedOnTop != isPinned {
             obs.note.isPinnedOnTop = isPinned
+            if isPinned {
+                obs.note.isVisible = true
+            }
         }
+
+        if let panel = panels[id] {
+            panel.updateLevel(isPinned: isPinned)
+            if isPinned {
+                panel.orderFront(nil)
+            }
+        } else if isPinned, let note = noteStore.notes.first(where: { $0.id == id }) {
+            createAndShowPanel(for: note)
+        }
+    }
+
+    func updateNoteSize(width: Double, height: Double) {
+        // Update all existing floating panels in realtime
+        for (id, panel) in panels {
+            var currentFrame = panel.frame
+            // Keep top-left origin fixed when resizing
+            let diffHeight = height - Double(currentFrame.size.height)
+            currentFrame.origin.y -= CGFloat(diffHeight)
+            currentFrame.size.width = CGFloat(width)
+            currentFrame.size.height = CGFloat(height)
+            panel.setFrame(currentFrame, display: true, animate: true)
+
+            if let obs = noteObservables[id] {
+                obs.note.width = width
+                obs.note.height = height
+            }
+        }
+
+        // Persist to all notes in note store
+        for i in 0..<noteStore.notes.count {
+            noteStore.notes[i].width = width
+            noteStore.notes[i].height = height
+        }
+        noteStore.saveNow()
     }
 
     func unpinAllNotes() {
@@ -187,6 +245,9 @@ final class WindowManager: NSObject, NSWindowDelegate {
     }
 
     func showAllNotesWindow() {
+        // When All Notes window is shown, make app visible in Dock / App Switcher (⌘Tab)
+        NSApp.setActivationPolicy(.regular)
+
         if let existing = allNotesWindow {
             existing.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
@@ -204,13 +265,14 @@ final class WindowManager: NSObject, NSWindowDelegate {
             }
         )
 
-        let window = NSWindow(
+        let window = AllNotesWindow(
             contentRect: NSRect(x: 250, y: 250, width: 720, height: 500),
             styleMask: [.titled, .closable, .resizable, .miniaturizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
-        window.title = ""
+        window.delegate = self
+        window.title = "FloatNotes"
         window.titlebarAppearsTransparent = true
         window.titleVisibility = .hidden
         window.isOpaque = false
@@ -221,6 +283,13 @@ final class WindowManager: NSObject, NSWindowDelegate {
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         self.allNotesWindow = window
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        if let window = notification.object as? NSWindow, window === allNotesWindow {
+            // Revert to accessory mode when All Notes window is closed
+            NSApp.setActivationPolicy(.accessory)
+        }
     }
 
     // Save frame on move/resize
