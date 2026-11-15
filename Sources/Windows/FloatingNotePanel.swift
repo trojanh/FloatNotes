@@ -21,6 +21,7 @@ final class FloatingNotePanel: NSPanel {
         self.backgroundColor = .clear
         self.hasShadow = true
         self.minSize = NSSize(width: 200, height: 180)
+        self.alphaValue = CGFloat(note.opacity)
 
         // Float across spaces/virtual desktops and full-screen apps
         // NOTE: .stationary was causing windows to disappear when dragged across spaces or repositioned!
@@ -43,6 +44,13 @@ final class FloatingNotePanel: NSPanel {
             if isPinned {
                 self.orderFront(nil)
             }
+        }
+    }
+
+    func updateOpacity(_ opacity: Double) {
+        let targetAlpha = CGFloat(max(0.2, min(1.0, opacity)))
+        if abs(self.alphaValue - targetAlpha) > 0.01 {
+            self.alphaValue = targetAlpha
         }
     }
 

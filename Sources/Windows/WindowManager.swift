@@ -70,6 +70,10 @@ final class WindowManager: NSObject, NSWindowDelegate {
         }
     }
 
+    func updatePanelOpacity(for id: UUID, opacity: Double) {
+        panels[id]?.updateOpacity(opacity)
+    }
+
     func updateNoteStatus(for id: UUID, status: NoteStatus) {
         if let obs = noteObservables[id] {
             obs.note.status = status
@@ -83,11 +87,20 @@ final class WindowManager: NSObject, NSWindowDelegate {
         // Observe text/state changes from inside the card, debounce them, and update storage cleanly without synchronous re-entry
         let sub = observable.$note
             .dropFirst()
+            .sink { [weak self] updatedNote in
+                self?.updatePanelOpacity(for: note.id, opacity: updatedNote.opacity)
+            }
+
+        let debounceSub = observable.$note
+            .dropFirst()
             .debounce(for: .milliseconds(300), scheduler: RunLoop.main)
             .sink { [weak self] updatedNote in
                 self?.noteStore.updateNote(updatedNote)
             }
-        noteCancellables[note.id] = sub
+        noteCancellables[note.id] = AnyCancellable {
+            sub.cancel()
+            debounceSub.cancel()
+        }
 
         let cardView = NoteCardView(
             noteModel: observable,
