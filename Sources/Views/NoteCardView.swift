@@ -42,8 +42,8 @@ struct NoteCardView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Top Header: Pin, Status Badge, Options, Close
-            HStack(spacing: 8) {
+            // Top Header: Pin, Status Badge, View All Notes, Options, Close
+            HStack(spacing: 6) {
                 // Pin Button
                 Button(action: onTogglePin) {
                     Image(systemName: noteModel.note.isPinnedOnTop ? "pin.fill" : "pin.slash")
@@ -59,6 +59,19 @@ struct NoteCardView: View {
                 StatusBadgeView(status: $noteModel.note.status)
 
                 Spacer()
+
+                // View All Notes Button directly from the note header!
+                Button(action: {
+                    WindowManager.shared.showAllNotesWindow()
+                }) {
+                    Image(systemName: "square.grid.2x2")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(noteModel.note.color.secondaryTextColor)
+                        .padding(4)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help("View All Notes")
 
                 // Settings popover
                 Button(action: { showOptions.toggle() }) {
@@ -266,64 +279,133 @@ struct NoteCardView: View {
     }
 
     private var noteOptionsPopover: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Card Appearance")
-                .font(.headline)
-                .padding(.bottom, 2)
+        VStack(alignment: .leading, spacing: 14) {
+            // Header
+            HStack {
+                Text("Card Appearance")
+                    .font(.system(size: 13, weight: .bold))
+                Spacer()
+                Button(action: { showOptions = false }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary.opacity(0.7))
+                }
+                .buttonStyle(.plain)
+            }
 
-            // Color palette
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Color")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+            // Beautiful Color Palette Swatches
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text("Color")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Text(noteModel.note.color.title)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(.primary)
+                }
 
-                HStack(spacing: 8) {
+                HStack(spacing: 10) {
                     ForEach(NoteColor.allCases) { c in
-                        Circle()
-                            .fill(c.swiftUIColor)
-                            .frame(width: 22, height: 22)
-                            .overlay(
+                        ZStack {
+                            Circle()
+                                .fill(c.swiftUIColor)
+                                .frame(width: 26, height: 26)
+                                .shadow(color: Color.black.opacity(0.15), radius: 2, x: 0, y: 1)
+
+                            if noteModel.note.color == c {
                                 Circle()
-                                    .stroke(noteModel.note.color == c ? Color.accentColor : Color.black.opacity(0.2), lineWidth: noteModel.note.color == c ? 2 : 1)
-                            )
-                            .onTapGesture {
+                                    .stroke(Color.accentColor, lineWidth: 2.5)
+                                    .frame(width: 32, height: 32)
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundColor(c == .graphite ? .white : Color.black.opacity(0.75))
+                            } else {
+                                Circle()
+                                    .stroke(Color.black.opacity(0.12), lineWidth: 1)
+                                    .frame(width: 26, height: 26)
+                            }
+                        }
+                        .frame(width: 34, height: 34)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            withAnimation(.easeInOut(duration: 0.15)) {
                                 noteModel.note.color = c
                             }
+                        }
+                    }
+                }
+                .padding(.vertical, 2)
+            }
+
+            Divider()
+
+            // Typography Picker
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Typography")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(.secondary)
+
+                HStack(spacing: 4) {
+                    ForEach(NoteFontDesign.allCases) { design in
+                        Button(action: {
+                            noteModel.note.fontDesign = design
+                        }) {
+                            Text(design.rawValue)
+                                .font(.system(size: 11, weight: noteModel.note.fontDesign == design ? .semibold : .regular))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 5)
+                                .background(noteModel.note.fontDesign == design ? Color.accentColor : Color.primary.opacity(0.06))
+                                .foregroundColor(noteModel.note.fontDesign == design ? .white : .primary)
+                                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
             }
 
             Divider()
 
-            // Font Style
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Typography")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-
-                Picker("Font", selection: $noteModel.note.fontDesign) {
-                    ForEach(NoteFontDesign.allCases) { design in
-                        Text(design.rawValue).tag(design)
-                    }
-                }
-                .pickerStyle(.segmented)
-            }
-
-            // Opacity
+            // Card Opacity Slider
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
                     Text("Card Opacity")
-                        .font(.caption)
+                        .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.secondary)
                     Spacer()
                     Text("\(Int(noteModel.note.opacity * 100))%")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                        .foregroundColor(.primary)
                 }
+
                 Slider(value: $noteModel.note.opacity, in: 0.4...1.0)
             }
+
+            Divider()
+
+            // Quick jump to All Notes view
+            Button(action: {
+                showOptions = false
+                WindowManager.shared.showAllNotesWindow()
+            }) {
+                HStack(spacing: 6) {
+                    Image(systemName: "square.grid.2x2")
+                        .font(.system(size: 11))
+                    Text("Open All Notes View")
+                        .font(.system(size: 11, weight: .medium))
+                    Spacer()
+                    Image(systemName: "arrow.right")
+                        .font(.system(size: 9))
+                        .foregroundColor(.secondary)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(Color.primary.opacity(0.05))
+                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+            }
+            .buttonStyle(.plain)
         }
         .padding(14)
-        .frame(width: 240)
+        .frame(width: 260)
     }
 }
