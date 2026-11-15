@@ -41,22 +41,23 @@ final class StatusBarController: NSObject {
         button.image = icon
         button.imagePosition = .imageLeading
 
-        let count = noteStore.visibleNotesCount
-        if count > 0 {
-            button.title = " \(count)"
-            button.attributedTitle = NSAttributedString(
-                string: " \(count)",
-                attributes: [
-                    .font: NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .medium)
-                ]
-            )
-        } else if noteStore.areAllNotesHidden {
+        let inProgressCount = noteStore.inProgressNotesCount
+        if noteStore.areAllNotesHidden {
             button.title = " (Hidden)"
             button.attributedTitle = NSAttributedString(
                 string: " (Hidden)",
                 attributes: [
                     .font: NSFont.systemFont(ofSize: 11, weight: .regular),
                     .foregroundColor: NSColor.secondaryLabelColor
+                ]
+            )
+        } else if inProgressCount > 0 {
+            button.title = " \(inProgressCount)"
+            button.attributedTitle = NSAttributedString(
+                string: " \(inProgressCount)",
+                attributes: [
+                    .font: NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .bold),
+                    .foregroundColor: NSColor.systemBlue
                 ]
             )
         } else {

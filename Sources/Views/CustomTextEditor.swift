@@ -27,7 +27,7 @@ struct CustomTextEditor: NSViewRepresentable {
         textContainer.widthTracksTextView = true
         layoutManager.addTextContainer(textContainer)
 
-        let textView = ListCapableTextView(frame: NSRect(origin: .zero, size: contentSize), textContainer: textContainer)
+        let textView = InteractiveChecklistTextView(frame: NSRect(origin: .zero, size: contentSize), textContainer: textContainer)
         textView.minSize = NSSize(width: 0, height: contentSize.height)
         textView.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
         textView.isVerticallyResizable = true
@@ -46,8 +46,8 @@ struct CustomTextEditor: NSViewRepresentable {
     }
 
     func updateNSView(_ nsView: NSScrollView, context: Context) {
-        guard let textView = nsView.documentView as? ListCapableTextView else { return }
-        
+        guard let textView = nsView.documentView as? InteractiveChecklistTextView else { return }
+
         if textView.string != text {
             let selectedRange = textView.selectedRange()
             textView.string = text
@@ -55,7 +55,7 @@ struct CustomTextEditor: NSViewRepresentable {
                 textView.setSelectedRange(selectedRange)
             }
         }
-        
+
         if textView.font != font {
             textView.font = font
         }
@@ -78,21 +78,70 @@ struct CustomTextEditor: NSViewRepresentable {
     }
 }
 
-// Subclass handling Return / Newline for Smart Lists (- [ ], -, •, 1.)
-final class ListCapableTextView: NSTextView {
+// Subclass handling:
+// 1. One-click toggle of interactive checkboxes (☐ ↔ ☑ or [ ] ↔ [x])
+// 2. Return / Newline continuation for lists
+final class InteractiveChecklistTextView: NSTextView {
+
+    override func mouseDown(with event: NSEvent) {
+        let point = self.convert(event.locationInWindow, from: nil)
+        let charIndex = self.characterIndexForInsertion(at: point)
+        let fullString = self.string as NSString
+
+        if charIndex < fullString.length {
+            let lineRange = fullString.lineRange(for: NSRange(location: charIndex, length: 0))
+            let line = fullString.substring(with: lineRange)
+            let clickOffsetInLine = charIndex - lineRange.location
+
+            // 1. Check for unicode checkbox at click position: ☐ (U+2610) or ☑ (U+2611) / ☒
+            if clickOffsetInLine <= 6 {
+                if let match = line.range(of: #"^(\s*)([☐☑])\s"#, options: .regularExpression) {
+                    let matchedText = String(line[match])
+                    let isChecked = matchedText.contains("☑")
+                    let newSymbol = isChecked ? "☐" : "☑"
+                    let matchNSRange = (line as NSString).range(of: matchedText)
+                    let replaceRange = NSRange(location: lineRange.location + matchNSRange.location, length: matchNSRange.length)
+                    let newPrefix = matchedText.replacingOccurrences(of: isChecked ? "☑" : "☐", with: newSymbol)
+
+                    if self.shouldChangeText(in: replaceRange, replacementString: newPrefix) {
+                        self.replaceCharacters(in: replaceRange, with: newPrefix)
+                        self.didChangeText()
+                        return
+                    }
+                }
+                // 2. Also support clicking markdown checkboxes [ ] ↔ [x]
+                else if let match = line.range(of: #"^(\s*)-\s\[([ xX])\]\s"#, options: .regularExpression) {
+                    let matchedText = String(line[match])
+                    let isChecked = matchedText.contains("[x]") || matchedText.contains("[X]")
+                    let newBox = isChecked ? "[ ]" : "[x]"
+                    let matchNSRange = (line as NSString).range(of: matchedText)
+                    let replaceRange = NSRange(location: lineRange.location + matchNSRange.location, length: matchNSRange.length)
+                    let newPrefix = (matchedText as NSString).replacingOccurrences(of: isChecked ? "[x]" : "[ ]", with: newBox)
+
+                    if self.shouldChangeText(in: replaceRange, replacementString: newPrefix) {
+                        self.replaceCharacters(in: replaceRange, with: newPrefix)
+                        self.didChangeText()
+                        return
+                    }
+                }
+            }
+        }
+
+        super.mouseDown(with: event)
+    }
+
     override func insertNewline(_ sender: Any?) {
         let currentString = self.string as NSString
         let selectedRange = self.selectedRange()
         let lineRange = currentString.lineRange(for: NSRange(location: selectedRange.location, length: 0))
         let currentLine = currentString.substring(with: lineRange)
-        
-        // Strip trailing newline from currentLine
+
+        // Strip trailing newline
         let trimmedLine = currentLine.trimmingCharacters(in: .newlines)
-        
-        // Check for empty bullet/checklist/number to cancel list on double return
-        let emptyChecklistPatterns = ["- [ ]", "- [x]", "- [X]", "*", "-", "•"]
-        if emptyChecklistPatterns.contains(trimmedLine.trimmingCharacters(in: .whitespaces)) {
-            // Remove the empty bullet
+
+        // Empty checklist/bullet patterns to cancel list on double return
+        let emptyPatterns = ["☐", "☑", "- [ ]", "- [x]", "- [X]", "*", "-", "•"]
+        if emptyPatterns.contains(trimmedLine.trimmingCharacters(in: .whitespaces)) {
             let replaceRange = NSRange(location: lineRange.location, length: min(lineRange.length, (self.string as NSString).length - lineRange.location))
             if self.shouldChangeText(in: replaceRange, replacementString: "") {
                 self.replaceCharacters(in: replaceRange, with: "")
@@ -104,13 +153,18 @@ final class ListCapableTextView: NSTextView {
         // Smart continuation checks
         var nextPrefix: String? = nil
 
-        // Checklist: - [ ] or - [x]
-        if let match = trimmedLine.range(of: #"^(\s*)-\s\[([ xX])\]\s"#, options: .regularExpression) {
+        // Unicode checklist: ☐ or ☑
+        if let match = trimmedLine.range(of: #"^(\s*)([☐☑])\s"#, options: .regularExpression) {
+            let indent = String(trimmedLine[match].prefix(while: { $0.isWhitespace }))
+            nextPrefix = "\(indent)☐ "
+        }
+        // Markdown Checklist: - [ ] or - [x]
+        else if let match = trimmedLine.range(of: #"^(\s*)-\s\[([ xX])\]\s"#, options: .regularExpression) {
             let indent = String(trimmedLine[match].prefix(while: { $0.isWhitespace }))
             nextPrefix = "\(indent)- [ ] "
         }
-        // Bullet: - or * or •
-        else if let match = trimmedLine.range(of: #"^(\s*)([-*•])\s"#, options: .regularExpression) {
+        // Bullet: • or - or *
+        else if let match = trimmedLine.range(of: #"^(\s*)([•\-*])\s"#, options: .regularExpression) {
             let prefixStr = String(trimmedLine[match])
             nextPrefix = prefixStr
         }

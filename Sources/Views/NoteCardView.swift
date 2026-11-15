@@ -8,6 +8,8 @@ struct NoteCardView: View {
 
     @State private var showOptions: Bool = false
     @State private var showAIMenu: Bool = false
+    @State private var showCopiedBanner: Bool = false
+    @ObservedObject private var aiService = AIService.shared
 
     var currentNSFont: NSFont {
         let size = CGFloat(noteModel.note.fontSize)
@@ -55,12 +57,12 @@ struct NoteCardView: View {
                 .buttonStyle(.plain)
                 .help(noteModel.note.isPinnedOnTop ? "Always on Top (Active)" : "Standard Window Level")
 
-                // Status Badge (todo, doing, done in lower case with status-colored text)
+                // Status Badge (todo, doing, done)
                 StatusBadgeView(status: $noteModel.note.status)
 
                 Spacer()
 
-                // View All Notes Button directly from the note header!
+                // View All Notes Button
                 Button(action: {
                     WindowManager.shared.showAllNotesWindow()
                 }) {
@@ -102,23 +104,37 @@ struct NoteCardView: View {
             .padding(.top, 9)
             .padding(.bottom, 4)
 
-            // Plain text editor with smart bullet / checklist support
-            CustomTextEditor(
-                text: $noteModel.note.text,
-                font: currentNSFont,
-                textColor: currentNSColor
-            )
-            .padding(.horizontal, 8)
-            .padding(.vertical, 2)
+            // Plain text editor with smart clickable checkboxes
+            ZStack(alignment: .top) {
+                CustomTextEditor(
+                    text: $noteModel.note.text,
+                    font: currentNSFont,
+                    textColor: currentNSColor
+                )
+                .padding(.horizontal, 8)
+                .padding(.vertical, 2)
+
+                if showCopiedBanner {
+                    Text("Copied as Clean Text!")
+                        .font(.system(size: 10, weight: .semibold))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Color.black.opacity(0.75))
+                        .foregroundColor(.white)
+                        .clipShape(Capsule())
+                        .transition(.opacity.combined(with: .scale))
+                        .padding(.top, 4)
+                }
+            }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             Divider()
                 .opacity(0.15)
                 .padding(.horizontal, 8)
 
-            // Always Visible Bottom Footer: List controls, Font controls & Seamless AI Send
-            HStack(spacing: 8) {
-                // Checklist button
+            // Always Visible Bottom Footer: List controls, Copy, Font controls & AI Send
+            HStack(spacing: 7) {
+                // Interactive Checklist button
                 Button(action: insertChecklist) {
                     Image(systemName: "checklist")
                         .font(.system(size: 11))
@@ -127,7 +143,7 @@ struct NoteCardView: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .help("Insert Checklist Item (- [ ])")
+                .help("Insert Clickable Checklist (☐)")
 
                 // Bullet button
                 Button(action: insertBullet) {
@@ -139,6 +155,17 @@ struct NoteCardView: View {
                 }
                 .buttonStyle(.plain)
                 .help("Insert Bullet (•)")
+
+                // Copy Clean Text Button
+                Button(action: copyCleanText) {
+                    Image(systemName: "doc.on.doc")
+                        .font(.system(size: 11))
+                        .foregroundColor(noteModel.note.color.secondaryTextColor)
+                        .padding(3)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help("Copy as Clean Markdown/Plain Text")
 
                 // Font size decrement
                 Button(action: {
@@ -168,7 +195,7 @@ struct NoteCardView: View {
 
                 Spacer()
 
-                // Seamless Send to AI button that perfectly blends with card palette
+                // Configurable Send to AI button
                 Button(action: {
                     showAIMenu.toggle()
                 }) {
@@ -191,55 +218,14 @@ struct NoteCardView: View {
                 .buttonStyle(.plain)
                 .help("Send Note Content to ChatGPT or Claude")
                 .popover(isPresented: $showAIMenu, arrowEdge: .top) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Send note to")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .padding(.bottom, 2)
-
-                        Button(action: {
-                            AIService.sendToChatGPT(text: noteModel.note.text)
-                            showAIMenu = false
-                        }) {
-                            HStack(spacing: 8) {
-                                Image(systemName: "sparkles")
-                                    .foregroundColor(.purple)
-                                Text("ChatGPT")
-                                    .font(.system(size: 12))
-                                Spacer()
-                            }
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 5)
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-
-                        Button(action: {
-                            AIService.sendToClaude(text: noteModel.note.text)
-                            showAIMenu = false
-                        }) {
-                            HStack(spacing: 8) {
-                                Image(systemName: "brain.head.profile")
-                                    .foregroundColor(.orange)
-                                Text("Claude")
-                                    .font(.system(size: 12))
-                                Spacer()
-                            }
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 5)
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    .padding(10)
-                    .frame(width: 150)
+                    aiDispatchPopover
                 }
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
             .background(Color.black.opacity(0.03))
         }
-        .frame(minWidth: 220, minHeight: 200)
+        .frame(minWidth: 230, minHeight: 200)
         .background(
             ZStack {
                 VisualEffectBackground(
@@ -260,11 +246,11 @@ struct NoteCardView: View {
 
     private func insertChecklist() {
         if noteModel.note.text.isEmpty {
-            noteModel.note.text = "- [ ] "
+            noteModel.note.text = "☐ "
         } else if noteModel.note.text.hasSuffix("\n") {
-            noteModel.note.text += "- [ ] "
+            noteModel.note.text += "☐ "
         } else {
-            noteModel.note.text += "\n- [ ] "
+            noteModel.note.text += "\n☐ "
         }
     }
 
@@ -276,6 +262,102 @@ struct NoteCardView: View {
         } else {
             noteModel.note.text += "\n• "
         }
+    }
+
+    private func copyCleanText() {
+        // Copies cleanly: converts unicode checkboxes to standard markdown [ ] / [x] for external apps
+        let cleanText = noteModel.note.text
+            .replacingOccurrences(of: "☐ ", with: "- [ ] ")
+            .replacingOccurrences(of: "☑ ", with: "- [x] ")
+
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        pb.setString(cleanText, forType: .string)
+
+        withAnimation {
+            showCopiedBanner = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+            withAnimation {
+                showCopiedBanner = false
+            }
+        }
+    }
+
+    private var aiDispatchPopover: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Send Note to AI")
+                .font(.system(size: 12, weight: .bold))
+
+            // AI Destination Config (App vs Web)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Destination Target")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(.secondary)
+
+                HStack(spacing: 6) {
+                    ForEach(AIDestination.allCases) { dest in
+                        Button(action: {
+                            aiService.preferredDestination = dest
+                        }) {
+                            Text(dest == .automatic ? "Auto" : (dest == .desktopApp ? "App" : "Web"))
+                                .font(.system(size: 10, weight: aiService.preferredDestination == dest ? .semibold : .regular))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 4)
+                                .background(aiService.preferredDestination == dest ? Color.accentColor : Color.primary.opacity(0.06))
+                                .foregroundColor(aiService.preferredDestination == dest ? .white : .primary)
+                                .clipShape(RoundedRectangle(cornerRadius: 6))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+
+            Divider()
+
+            // Action Buttons
+            let clean = noteModel.note.text
+                .replacingOccurrences(of: "☐ ", with: "- [ ] ")
+                .replacingOccurrences(of: "☑ ", with: "- [x] ")
+
+            Button(action: {
+                AIService.sendToChatGPT(text: clean)
+                showAIMenu = false
+            }) {
+                HStack(spacing: 8) {
+                    Image(systemName: "sparkles")
+                        .foregroundColor(.purple)
+                    Text("Send to ChatGPT")
+                        .font(.system(size: 12, weight: .medium))
+                    Spacer()
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 5)
+                .background(Color.primary.opacity(0.04))
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+            }
+            .buttonStyle(.plain)
+
+            Button(action: {
+                AIService.sendToClaude(text: clean)
+                showAIMenu = false
+            }) {
+                HStack(spacing: 8) {
+                    Image(systemName: "brain.head.profile")
+                        .foregroundColor(.orange)
+                    Text("Send to Claude")
+                        .font(.system(size: 12, weight: .medium))
+                    Spacer()
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 5)
+                .background(Color.primary.opacity(0.04))
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(12)
+        .frame(width: 250)
     }
 
     private var noteOptionsPopover: some View {

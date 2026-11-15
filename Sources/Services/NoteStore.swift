@@ -30,6 +30,11 @@ final class NoteStore: ObservableObject {
         return notes.filter { $0.isVisible }.count
     }
 
+    var inProgressNotesCount: Int {
+        if areAllNotesHidden { return 0 }
+        return notes.filter { $0.isVisible && $0.status == .inProgress }.count
+    }
+
     func load() {
         guard let data = try? Data(contentsOf: fileURL) else { return }
         if let decoded = try? JSONDecoder().decode([StickyNote].self, from: data) {
