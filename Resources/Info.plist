@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleExecutable</key>
+    <string>FloatNotes</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.trojanh.FloatNotes</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>FloatNotes</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.1.0</string>
+    <key>CFBundleVersion</key>
+    <string>2</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>13.0</string>
+    <key>LSUIElement</key>
+    <true/>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>NSCalendarsUsageDescription</key>
+    <string>FloatNotes needs Calendar access to add scheduled events from your notes.</string>
+    <key>NSRemindersUsageDescription</key>
+    <string>FloatNotes needs Reminders access to create reminder tasks from your notes.</string>
+    <key>NSSpeechRecognitionUsageDescription</key>
+    <string>FloatNotes uses Speech Recognition for voice note dictation.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>FloatNotes needs Microphone access for voice note dictation.</string>
+</dict>
+</plist>
