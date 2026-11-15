@@ -6,8 +6,8 @@ struct NoteCardView: View {
     var onDelete: () -> Void
     var onTogglePin: () -> Void
 
-    @State private var isHovered: Bool = false
     @State private var showOptions: Bool = false
+    @State private var showCopiedAlert: Bool = false
 
     var currentNSFont: NSFont {
         let size = CGFloat(note.fontSize)
@@ -42,92 +42,52 @@ struct NoteCardView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Header bar
-            HStack(spacing: 6) {
+            // Top Header: Pin, Status Badge, Options, Close
+            HStack(spacing: 8) {
                 // Pin Button
                 Button(action: onTogglePin) {
                     Image(systemName: note.isPinnedOnTop ? "pin.fill" : "pin.slash")
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundColor(note.isPinnedOnTop ? .accentColor : note.color.secondaryTextColor)
-                        .padding(3)
+                        .padding(4)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .help(note.isPinnedOnTop ? "Always on Top (Active)" : "Standard Window Level")
 
-                // Status Badge (TODO, DOING, DONE)
+                // Status Badge (todo, doing, done in lower case with status-colored text)
                 StatusBadgeView(status: $note.status)
 
                 Spacer()
 
-                // Quick List Buttons on Hover
-                if isHovered || showOptions {
-                    HStack(spacing: 4) {
-                        // Insert Checklist
-                        Button(action: insertChecklist) {
-                            Image(systemName: "checklist")
-                                .font(.system(size: 11))
-                                .foregroundColor(note.color.secondaryTextColor)
-                        }
-                        .buttonStyle(.plain)
-                        .help("Insert Checklist Item")
-
-                        // Insert Bullet
-                        Button(action: insertBullet) {
-                            Image(systemName: "list.bullet")
-                                .font(.system(size: 11))
-                                .foregroundColor(note.color.secondaryTextColor)
-                        }
-                        .buttonStyle(.plain)
-                        .help("Insert Bullet Item")
-
-                        // Font size quick controls
-                        Button(action: {
-                            if note.fontSize > 11 { note.fontSize -= 1 }
-                        }) {
-                            Text("A-")
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundColor(note.color.secondaryTextColor)
-                        }
-                        .buttonStyle(.plain)
-                        .help("Decrease Font Size")
-
-                        Button(action: {
-                            if note.fontSize < 32 { note.fontSize += 1 }
-                        }) {
-                            Text("A+")
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundColor(note.color.secondaryTextColor)
-                        }
-                        .buttonStyle(.plain)
-                        .help("Increase Font Size")
-
-                        // Options & AI Popover
-                        Button(action: { showOptions.toggle() }) {
-                            Image(systemName: "ellipsis.circle")
-                                .font(.system(size: 12))
-                                .foregroundColor(note.color.secondaryTextColor)
-                        }
-                        .buttonStyle(.plain)
-                        .popover(isPresented: $showOptions, arrowEdge: .bottom) {
-                            noteOptionsPopover
-                        }
-                    }
+                // Settings popover
+                Button(action: { showOptions.toggle() }) {
+                    Image(systemName: "slider.horizontal.3")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(note.color.secondaryTextColor)
+                        .padding(4)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help("Card Styles & Options")
+                .popover(isPresented: $showOptions, arrowEdge: .bottom) {
+                    noteOptionsPopover
                 }
 
                 // Delete / Close button
                 Button(action: onDelete) {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 13))
-                        .foregroundColor(note.color.secondaryTextColor.opacity(0.8))
+                        .foregroundColor(note.color.secondaryTextColor.opacity(0.75))
+                        .padding(2)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .help("Delete Sticky Note")
             }
             .padding(.horizontal, 10)
-            .padding(.top, 8)
-            .padding(.bottom, 6)
-            .background(Color.clear)
+            .padding(.top, 9)
+            .padding(.bottom, 4)
 
             // Plain text editor with smart bullet / checklist support
             CustomTextEditor(
@@ -136,10 +96,100 @@ struct NoteCardView: View {
                 textColor: currentNSColor
             )
             .padding(.horizontal, 8)
-            .padding(.bottom, 8)
+            .padding(.vertical, 2)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            Divider()
+                .opacity(0.15)
+                .padding(.horizontal, 8)
+
+            // Always Visible Bottom Footer: List controls, Font controls & Send to AI
+            HStack(spacing: 8) {
+                // Checklist button
+                Button(action: insertChecklist) {
+                    Image(systemName: "checklist")
+                        .font(.system(size: 11))
+                        .foregroundColor(note.color.secondaryTextColor)
+                        .padding(3)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help("Insert Checklist Item (- [ ])")
+
+                // Bullet button
+                Button(action: insertBullet) {
+                    Image(systemName: "list.bullet")
+                        .font(.system(size: 11))
+                        .foregroundColor(note.color.secondaryTextColor)
+                        .padding(3)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help("Insert Bullet (•)")
+
+                // Font size decrement
+                Button(action: {
+                    if note.fontSize > 11 { note.fontSize -= 1 }
+                }) {
+                    Text("A-")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(note.color.secondaryTextColor)
+                        .padding(2)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help("Smaller Text")
+
+                // Font size increment
+                Button(action: {
+                    if note.fontSize < 32 { note.fontSize += 1 }
+                }) {
+                    Text("A+")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(note.color.secondaryTextColor)
+                        .padding(2)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help("Larger Text")
+
+                Spacer()
+
+                // Send to AI Menu
+                Menu {
+                    Button(action: {
+                        AIService.sendToChatGPT(text: note.text)
+                    }) {
+                        Label("ChatGPT", systemImage: "sparkles")
+                    }
+
+                    Button(action: {
+                        AIService.sendToClaude(text: note.text)
+                    }) {
+                        Label("Claude", systemImage: "brain.head.profile")
+                    }
+                } label: {
+                    HStack(spacing: 3) {
+                        Image(systemName: "paperplane.fill")
+                            .font(.system(size: 9))
+                        Text("Send to AI")
+                            .font(.system(size: 10, weight: .medium))
+                    }
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3.5)
+                    .background(note.color.textColor.opacity(0.08))
+                    .foregroundColor(note.color.textColor)
+                    .clipShape(Capsule())
+                }
+                .menuStyle(.borderlessButton)
+                .fixedSize()
+                .help("Send Note Content to ChatGPT or Claude")
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(Color.black.opacity(0.03))
         }
-        .frame(minWidth: 200, minHeight: 180)
+        .frame(minWidth: 220, minHeight: 200)
         .background(
             ZStack {
                 VisualEffectBackground(
@@ -156,11 +206,6 @@ struct NoteCardView: View {
                 .stroke(Color.white.opacity(0.25), lineWidth: 1)
         )
         .shadow(color: Color.black.opacity(0.18), radius: 10, x: 0, y: 5)
-        .onHover { hovering in
-            withAnimation(.easeInOut(duration: 0.15)) {
-                isHovered = hovering
-            }
-        }
     }
 
     private func insertChecklist() {
@@ -185,44 +230,9 @@ struct NoteCardView: View {
 
     private var noteOptionsPopover: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Note Settings & Actions")
+            Text("Card Appearance")
                 .font(.headline)
                 .padding(.bottom, 2)
-
-            // Send to AI Apps section
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Send to AI App")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-
-                HStack(spacing: 8) {
-                    Button(action: {
-                        AIService.sendToChatGPT(text: note.text)
-                        showOptions = false
-                    }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "sparkles")
-                            Text("ChatGPT")
-                        }
-                        .font(.system(size: 11, weight: .medium))
-                    }
-                    .buttonStyle(.bordered)
-
-                    Button(action: {
-                        AIService.sendToClaude(text: note.text)
-                        showOptions = false
-                    }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "brain.head.profile")
-                            Text("Claude")
-                        }
-                        .font(.system(size: 11, weight: .medium))
-                    }
-                    .buttonStyle(.bordered)
-                }
-            }
-
-            Divider()
 
             // Color palette
             VStack(alignment: .leading, spacing: 6) {
@@ -277,6 +287,6 @@ struct NoteCardView: View {
             }
         }
         .padding(14)
-        .frame(width: 250)
+        .frame(width: 240)
     }
 }

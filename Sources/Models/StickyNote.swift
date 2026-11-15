@@ -1,17 +1,17 @@
 import Foundation
 
 enum NoteStatus: String, CaseIterable, Codable, Identifiable {
-    case todo = "TODO"
-    case inProgress = "IN PROGRESS"
-    case done = "DONE"
+    case todo = "todo"
+    case inProgress = "in progress"
+    case done = "done"
 
     var id: String { rawValue }
 
     var shortLabel: String {
         switch self {
-        case .todo: return "TODO"
-        case .inProgress: return "DOING"
-        case .done: return "DONE"
+        case .todo: return "todo"
+        case .inProgress: return "doing"
+        case .done: return "done"
         }
     }
 }
@@ -57,7 +57,7 @@ struct StickyNote: Identifiable, Codable, Equatable {
     var x: Double = 200
     var y: Double = 200
     var width: Double = 260
-    var height: Double = 260
+    var height: Double = 280
     
     // Status
     var status: NoteStatus = .todo
