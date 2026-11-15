@@ -32,6 +32,8 @@ struct NoteCardView: View {
                     Image(systemName: note.isPinnedOnTop ? "pin.fill" : "pin.slash")
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundColor(note.isPinnedOnTop ? .accentColor : note.color.secondaryTextColor)
+                        .padding(4)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .help(note.isPinnedOnTop ? "Float on Top (Active)" : "Standard Window Level")

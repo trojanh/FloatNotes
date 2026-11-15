@@ -7,6 +7,7 @@ final class NoteStore: ObservableObject {
     @Published var areAllNotesHidden: Bool = false
 
     private let fileURL: URL
+    private var saveWorkItem: DispatchWorkItem?
 
     init() {
         let fileManager = FileManager.default
@@ -36,9 +37,21 @@ final class NoteStore: ObservableObject {
         }
     }
 
-    func save() {
+    func saveNow() {
+        saveWorkItem?.cancel()
         guard let data = try? JSONEncoder().encode(notes) else { return }
         try? data.write(to: fileURL, options: .atomic)
+    }
+
+    func scheduleSave() {
+        saveWorkItem?.cancel()
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self = self else { return }
+            guard let data = try? JSONEncoder().encode(self.notes) else { return }
+            try? data.write(to: self.fileURL, options: .atomic)
+        }
+        saveWorkItem = workItem
+        DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 0.5, execute: workItem)
     }
 
     @discardableResult
@@ -53,20 +66,24 @@ final class NoteStore: ObservableObject {
         newNote.y = offset?.y != nil ? Double(offset!.y) : defaultY
 
         notes.append(newNote)
-        save()
+        saveNow()
         return newNote
     }
 
-    func updateNote(_ note: StickyNote) {
+    func updateNote(_ note: StickyNote, immediateSave: Bool = false) {
         if let idx = notes.firstIndex(where: { $0.id == note.id }) {
             notes[idx] = note
-            save()
+            if immediateSave {
+                saveNow()
+            } else {
+                scheduleSave()
+            }
         }
     }
 
     func deleteNote(id: UUID) {
         notes.removeAll { $0.id == id }
-        save()
+        saveNow()
     }
 
     func toggleAllNotesVisibility() {
@@ -79,6 +96,6 @@ final class NoteStore: ObservableObject {
         for i in 0..<notes.count {
             notes[i].isVisible = true
         }
-        save()
+        saveNow()
     }
 }

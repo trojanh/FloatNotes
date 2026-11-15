@@ -37,10 +37,12 @@ final class FloatingNotePanel: NSPanel {
     }
 
     func updateLevel(isPinned: Bool) {
-        if isPinned {
-            self.level = .floating
-        } else {
-            self.level = .normal
+        let targetLevel: NSWindow.Level = isPinned ? .floating : .normal
+        if self.level != targetLevel {
+            self.level = targetLevel
+            if isPinned {
+                self.orderFront(nil)
+            }
         }
     }
 

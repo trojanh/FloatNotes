@@ -51,6 +51,10 @@ final class WindowManager: NSObject, NSWindowDelegate {
         }
     }
 
+    func updatePanelLevel(for id: UUID, isPinned: Bool) {
+        panels[id]?.updateLevel(isPinned: isPinned)
+    }
+
     private func createAndShowPanel(for note: StickyNote) {
         let noteBinding = Binding<StickyNote>(
             get: { [weak self] in
@@ -70,7 +74,8 @@ final class WindowManager: NSObject, NSWindowDelegate {
                 guard let self = self else { return }
                 if var n = self.noteStore.notes.first(where: { $0.id == note.id }) {
                     n.isPinnedOnTop.toggle()
-                    self.noteStore.updateNote(n)
+                    self.updatePanelLevel(for: note.id, isPinned: n.isPinnedOnTop)
+                    self.noteStore.updateNote(n, immediateSave: true)
                 }
             }
         )
