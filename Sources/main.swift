@@ -9,11 +9,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Run as an accessory app (no dock icon, pure menu-bar + floating panels)
         NSApp.setActivationPolicy(.accessory)
 
-        setupStandardMenus()
-
         self.noteStore = NoteStore()
         WindowManager.shared.configure(with: noteStore)
         self.statusBarController = StatusBarController(noteStore: noteStore)
+
+        setupStandardMenus()
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -51,6 +51,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         editMenuItem.submenu = editMenu
         mainMenu.addItem(editMenuItem)
 
+        // Format Menu (macOS Standard Font Size Shortcuts: ⌘+ and ⌘-)
+        let formatMenuItem = NSMenuItem()
+        let formatMenu = NSMenu(title: "Format")
+        let fontMenuItem = NSMenuItem(title: "Font", action: nil, keyEquivalent: "")
+        let fontMenu = NSMenu(title: "Font")
+
+        let biggerItem = NSMenuItem(title: "Bigger", action: #selector(makeFontBiggerAction), keyEquivalent: "+")
+        biggerItem.target = self
+        fontMenu.addItem(biggerItem)
+
+        let biggerItemEq = NSMenuItem(title: "Bigger", action: #selector(makeFontBiggerAction), keyEquivalent: "=")
+        biggerItemEq.target = self
+        biggerItemEq.isAlternate = true
+        fontMenu.addItem(biggerItemEq)
+
+        let smallerItem = NSMenuItem(title: "Smaller", action: #selector(makeFontSmallerAction), keyEquivalent: "-")
+        smallerItem.target = self
+        fontMenu.addItem(smallerItem)
+
+        fontMenuItem.submenu = fontMenu
+        formatMenu.addItem(fontMenuItem)
+        formatMenuItem.submenu = formatMenu
+        mainMenu.addItem(formatMenuItem)
+
         // Window Menu (⌘W, ⌘M)
         let windowMenuItem = NSMenuItem()
         let windowMenu = NSMenu(title: "Window")
@@ -60,6 +84,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         mainMenu.addItem(windowMenuItem)
 
         NSApp.mainMenu = mainMenu
+    }
+
+    @objc private func makeFontBiggerAction() {
+        WindowManager.shared.adjustFontSizeForActiveNote(delta: 1)
+    }
+
+    @objc private func makeFontSmallerAction() {
+        WindowManager.shared.adjustFontSizeForActiveNote(delta: -1)
     }
 }
 

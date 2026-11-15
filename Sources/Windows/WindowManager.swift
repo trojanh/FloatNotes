@@ -80,6 +80,25 @@ final class WindowManager: NSObject, NSWindowDelegate {
         }
     }
 
+    func adjustFontSizeForActiveNote(delta: Double) {
+        // Find the currently key / focused note window
+        for (id, panel) in panels where panel.isKeyWindow {
+            if let obs = noteObservables[id] {
+                let newSize = max(11, min(36, obs.note.fontSize + delta))
+                obs.note.fontSize = newSize
+                noteStore.updateNote(obs.note, immediateSave: true)
+                return
+            }
+        }
+
+        // If none is key, adjust the most recently updated note
+        if let first = noteObservables.values.first {
+            let newSize = max(11, min(36, first.note.fontSize + delta))
+            first.note.fontSize = newSize
+            noteStore.updateNote(first.note, immediateSave: true)
+        }
+    }
+
     private func createAndShowPanel(for note: StickyNote) {
         let observable = NoteObservable(note: note)
         noteObservables[note.id] = observable
