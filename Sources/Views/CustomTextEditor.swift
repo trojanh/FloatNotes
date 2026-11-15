@@ -79,54 +79,66 @@ struct CustomTextEditor: NSViewRepresentable {
 }
 
 // Subclass handling:
-// 1. One-click toggle of interactive checkboxes (☐ ↔ ☑ or [ ] ↔ [x])
-// 2. Return / Newline continuation for lists
+// 1. Precise checkbox toggle ONLY when clicking on the exact checkbox glyph
+// 2. Full cursor placement and editing when clicking on text or empty spaces
+// 3. Return / Newline continuation for lists
 final class InteractiveChecklistTextView: NSTextView {
 
     override func mouseDown(with event: NSEvent) {
         let point = self.convert(event.locationInWindow, from: nil)
-        let charIndex = self.characterIndexForInsertion(at: point)
         let fullString = self.string as NSString
 
-        if charIndex < fullString.length {
-            let lineRange = fullString.lineRange(for: NSRange(location: charIndex, length: 0))
-            let line = fullString.substring(with: lineRange)
-            let clickOffsetInLine = charIndex - lineRange.location
+        if fullString.length > 0 {
+            // Get character index where clicked
+            var fraction: CGFloat = 0
+            let charIndex = self.layoutManager?.characterIndex(for: point, in: self.textContainer!, fractionOfDistanceBetweenInsertionPoints: &fraction) ?? NSNotFound
 
-            // 1. Check for unicode checkbox at click position: ☐ (U+2610) or ☑ (U+2611) / ☒
-            if clickOffsetInLine <= 6 {
-                if let match = line.range(of: #"^(\s*)([☐☑])\s"#, options: .regularExpression) {
+            if charIndex != NSNotFound && charIndex < fullString.length {
+                let lineRange = fullString.lineRange(for: NSRange(location: charIndex, length: 0))
+                let line = fullString.substring(with: lineRange)
+                let charInLineIndex = charIndex - lineRange.location
+
+                // 1. Check if line starts with Unicode checkbox: ☐ or ☑
+                if let match = line.range(of: #"^(\s*)([☐☑])"#, options: .regularExpression) {
                     let matchedText = String(line[match])
-                    let isChecked = matchedText.contains("☑")
-                    let newSymbol = isChecked ? "☐" : "☑"
-                    let matchNSRange = (line as NSString).range(of: matchedText)
-                    let replaceRange = NSRange(location: lineRange.location + matchNSRange.location, length: matchNSRange.length)
-                    let newPrefix = matchedText.replacingOccurrences(of: isChecked ? "☑" : "☐", with: newSymbol)
+                    // The symbol index in the line
+                    let symbolIndex = (line as NSString).range(of: matchedText).location + (line as NSString).range(of: matchedText).length - 1
 
-                    if self.shouldChangeText(in: replaceRange, replacementString: newPrefix) {
-                        self.replaceCharacters(in: replaceRange, with: newPrefix)
-                        self.didChangeText()
-                        return
+                    // ONLY toggle if the click is directly on the checkbox character itself!
+                    if charInLineIndex == symbolIndex {
+                        let isChecked = matchedText.contains("☑")
+                        let newSymbol = isChecked ? "☐" : "☑"
+                        let replaceRange = NSRange(location: lineRange.location + symbolIndex, length: 1)
+
+                        if self.shouldChangeText(in: replaceRange, replacementString: newSymbol) {
+                            self.replaceCharacters(in: replaceRange, with: newSymbol)
+                            self.didChangeText()
+                            return
+                        }
                     }
                 }
-                // 2. Also support clicking markdown checkboxes [ ] ↔ [x]
-                else if let match = line.range(of: #"^(\s*)-\s\[([ xX])\]\s"#, options: .regularExpression) {
+                // 2. Check if line starts with Markdown checkbox: - [ ] or - [x]
+                else if let match = line.range(of: #"^(\s*)-\s\[([ xX])\]"#, options: .regularExpression) {
                     let matchedText = String(line[match])
-                    let isChecked = matchedText.contains("[x]") || matchedText.contains("[X]")
-                    let newBox = isChecked ? "[ ]" : "[x]"
                     let matchNSRange = (line as NSString).range(of: matchedText)
-                    let replaceRange = NSRange(location: lineRange.location + matchNSRange.location, length: matchNSRange.length)
-                    let newPrefix = (matchedText as NSString).replacingOccurrences(of: isChecked ? "[x]" : "[ ]", with: newBox)
 
-                    if self.shouldChangeText(in: replaceRange, replacementString: newPrefix) {
-                        self.replaceCharacters(in: replaceRange, with: newPrefix)
-                        self.didChangeText()
-                        return
+                    // ONLY toggle if click is inside the bracket bounds
+                    if charInLineIndex >= matchNSRange.location && charInLineIndex <= matchNSRange.location + matchNSRange.length {
+                        let isChecked = matchedText.contains("[x]") || matchedText.contains("[X]")
+                        let newBox = isChecked ? "[ ]" : "[x]"
+                        let replaceRange = NSRange(location: lineRange.location + matchNSRange.location + matchNSRange.length - 3, length: 3)
+
+                        if self.shouldChangeText(in: replaceRange, replacementString: newBox) {
+                            self.replaceCharacters(in: replaceRange, with: newBox)
+                            self.didChangeText()
+                            return
+                        }
                     }
                 }
             }
         }
 
+        // Standard text cursor placement, selection, and editing
         super.mouseDown(with: event)
     }
 

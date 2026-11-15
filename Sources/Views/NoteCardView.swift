@@ -245,6 +245,7 @@ struct NoteCardView: View {
     }
 
     private func insertChecklist() {
+        // Appends or inserts clean checklist item
         if noteModel.note.text.isEmpty {
             noteModel.note.text = "☐ "
         } else if noteModel.note.text.hasSuffix("\n") {
