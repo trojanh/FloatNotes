@@ -11,7 +11,7 @@ on:
 jobs:
   build_and_test:
     name: Build & Verify FloatNotes
-    runs-on: macos-14
+    runs-on: macos-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
