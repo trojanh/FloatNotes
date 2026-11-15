@@ -51,6 +51,6 @@ final class FloatingNotePanel: NSPanel {
     }
 
     override var canBecomeMain: Bool {
-        return false
+        return true
     }
 }
