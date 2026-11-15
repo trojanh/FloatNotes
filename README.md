@@ -48,6 +48,7 @@ Designed with modern macOS translucency, clickable checklists, status tracking, 
 | :--- | :--- |
 | `⌘ N` | Create a new sticky note |
 | `⇧ ⌘ O` | Open the "All Sticky Notes" overview window |
+| `⇧ ⌘ S` | Stack all pinned notes neatly on screen (multi-column) |
 | `⌥ ⌘ H` | Toggle visibility (Show / Hide All Notes) |
 | `⌘ +` / `⌘ =` | Increase font size of active note |
 | `⌘ -` | Decrease font size of active note |

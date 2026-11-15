@@ -7,6 +7,7 @@ struct NoteCardView: View {
     var onTogglePin: () -> Void
 
     @State private var showOptions: Bool = false
+    @State private var showTextOptions: Bool = false
     @State private var showAIMenu: Bool = false
     @State private var showCopiedBanner: Bool = false
     @State private var showDeleteConfirmation: Bool = false
@@ -57,7 +58,7 @@ struct NoteCardView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Top Header: Pin, Status Badge, Smart Suggestion, View All Notes, Options, Close
+            // Top Header: Pin, Status Badge, Smart Suggestion, View All Notes, Options, Hide
             HStack(spacing: 6) {
                 // Pin Button
                 Button(action: onTogglePin) {
@@ -102,7 +103,7 @@ struct NoteCardView: View {
                 .buttonStyle(.plain)
                 .help("View All Notes")
 
-                // Settings popover
+                // Appearance & Color popover
                 Button(action: { showOptions.toggle() }) {
                     Image(systemName: "slider.horizontal.3")
                         .font(.system(size: 11, weight: .medium))
@@ -111,14 +112,14 @@ struct NoteCardView: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .help("Card Styles & Options")
+                .help("Card Styles & Color")
                 .popover(isPresented: $showOptions, arrowEdge: .bottom) {
                     noteOptionsPopover
                 }
 
-                // Delete / Close button with confirmation popover
+                // Close button: Hides the floating note (doesn't delete it)
                 Button(action: {
-                    showDeleteConfirmation = true
+                    WindowManager.shared.hideNote(id: noteModel.note.id)
                 }) {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 13))
@@ -127,10 +128,7 @@ struct NoteCardView: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .help("Delete Sticky Note")
-                .popover(isPresented: $showDeleteConfirmation, arrowEdge: .bottom) {
-                    deleteConfirmationPopover
-                }
+                .help("Hide Sticky Note (Reopen from View All or Menu Bar)")
             }
             .padding(.horizontal, 10)
             .padding(.top, 9)
@@ -165,8 +163,8 @@ struct NoteCardView: View {
                 .opacity(0.15)
                 .padding(.horizontal, 8)
 
-            // Always Visible Bottom Footer: List controls, Voice Dictation, Copy, Font controls & AI Send
-            HStack(spacing: 7) {
+            // Always Visible Bottom Footer: List controls, Voice Dictation, Copy, Font controls, AI Send & Delete
+            HStack(spacing: 6) {
                 // Interactive Checklist button
                 Button(action: insertChecklist) {
                     Image(systemName: "checklist")
@@ -211,52 +209,40 @@ struct NoteCardView: View {
                 .buttonStyle(.plain)
                 .help("Copy as Clean Markdown/Plain Text")
 
-                // Font size decrement
-                Button(action: {
-                    if noteModel.note.fontSize > 11 { noteModel.note.fontSize -= 1 }
-                }) {
-                    Text("A-")
-                        .font(.system(size: 10, weight: .bold))
+                // Text Formatting & Typography Settings Toggle Button
+                Button(action: { showTextOptions.toggle() }) {
+                    Image(systemName: "textformat")
+                        .font(.system(size: 11))
                         .foregroundColor(noteModel.note.color.secondaryTextColor)
-                        .padding(2)
+                        .padding(3)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .help("Smaller Text (⌘-)")
-
-                // Font size increment
-                Button(action: {
-                    if noteModel.note.fontSize < 32 { noteModel.note.fontSize += 1 }
-                }) {
-                    Text("A+")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundColor(noteModel.note.color.secondaryTextColor)
-                        .padding(2)
-                        .contentShape(Rectangle())
+                .help("Text Settings (Font size, family & style)")
+                .popover(isPresented: $showTextOptions, arrowEdge: .top) {
+                    textOptionsPopover
                 }
-                .buttonStyle(.plain)
-                .help("Larger Text (⌘+)")
 
                 Spacer()
 
-                // Configurable Send to AI button with modern Apple Glass Pill styling
+                // Modern Send to AI Button (Icon + Label in frosted pill)
                 Button(action: {
                     showAIMenu.toggle()
                 }) {
                     HStack(spacing: 4) {
-                        Image(systemName: "paperplane.fill")
-                            .font(.system(size: 8))
-                        Text("Send to AI")
-                            .font(.system(size: 10, weight: .semibold, design: .rounded))
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 9))
+                        Text("AI")
+                            .font(.system(size: 10, weight: .bold, design: .rounded))
                     }
                     .foregroundColor(noteModel.note.color.textColor.opacity(0.90))
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3.5)
                     .background(
                         ZStack {
-                            Color.white.opacity(0.18)
+                            Color.white.opacity(0.20)
                             LinearGradient(
-                                colors: [Color.white.opacity(0.20), Color.clear],
+                                colors: [Color.white.opacity(0.22), Color.clear],
                                 startPoint: .top,
                                 endPoint: .bottom
                             )
@@ -277,9 +263,25 @@ struct NoteCardView: View {
                     .shadow(color: Color.black.opacity(0.06), radius: 2, x: 0, y: 1)
                 }
                 .buttonStyle(.plain)
-                .help("Send Note Content to Gemini, ChatGPT, Claude, or Perplexity")
+                .help("Send Note to Gemini, ChatGPT, Claude, or Perplexity")
                 .popover(isPresented: $showAIMenu, arrowEdge: .top) {
                     aiDispatchPopover
+                }
+
+                // Dedicated Delete Note Button with Confirmation Popover
+                Button(action: {
+                    showDeleteConfirmation = true
+                }) {
+                    Image(systemName: "trash")
+                        .font(.system(size: 11))
+                        .foregroundColor(noteModel.note.color.secondaryTextColor.opacity(0.75))
+                        .padding(4)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help("Delete Sticky Note")
+                .popover(isPresented: $showDeleteConfirmation, arrowEdge: .top) {
+                    deleteConfirmationPopover
                 }
             }
             .padding(.horizontal, 10)
@@ -292,7 +294,7 @@ struct NoteCardView: View {
                 )
             )
         }
-        .frame(minWidth: 230, minHeight: 200)
+        .frame(minWidth: 180, minHeight: 120)
         .background(
             ZStack {
                 // Frosted Glass Material
@@ -797,5 +799,98 @@ struct NoteCardView: View {
         }
         .padding(14)
         .frame(width: 260)
+    }
+
+    private var textOptionsPopover: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "textformat")
+                    .foregroundColor(.accentColor)
+                Text("Text Settings")
+                    .font(.system(size: 12, weight: .bold))
+                Spacer()
+                Button(action: { showTextOptions = false }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary.opacity(0.7))
+                }
+                .buttonStyle(.plain)
+            }
+
+            // Font Size Controls
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text("Font Size")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Text("\(Int(noteModel.note.fontSize)) pt")
+                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                        .foregroundColor(.primary)
+                }
+
+                HStack(spacing: 8) {
+                    Button(action: {
+                        if noteModel.note.fontSize > 11 { noteModel.note.fontSize -= 1 }
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "textformat.size.smaller")
+                            Text("Smaller")
+                                .font(.system(size: 11, weight: .medium))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 5)
+                        .background(Color.primary.opacity(0.06))
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                    }
+                    .buttonStyle(.plain)
+                    .help("Smaller Text (⌘-)")
+
+                    Button(action: {
+                        if noteModel.note.fontSize < 36 { noteModel.note.fontSize += 1 }
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "textformat.size.larger")
+                            Text("Larger")
+                                .font(.system(size: 11, weight: .medium))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 5)
+                        .background(Color.primary.opacity(0.06))
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                    }
+                    .buttonStyle(.plain)
+                    .help("Larger Text (⌘+)")
+                }
+            }
+
+            Divider()
+
+            // Typography Design
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Font Family")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(.secondary)
+
+                HStack(spacing: 4) {
+                    ForEach(NoteFontDesign.allCases) { design in
+                        Button(action: {
+                            noteModel.note.fontDesign = design
+                        }) {
+                            Text(design.rawValue)
+                                .font(.system(size: 10, weight: noteModel.note.fontDesign == design ? .semibold : .regular))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 4)
+                                .background(noteModel.note.fontDesign == design ? Color.accentColor : Color.primary.opacity(0.06))
+                                .foregroundColor(noteModel.note.fontDesign == design ? .white : .primary)
+                                .clipShape(RoundedRectangle(cornerRadius: 6))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+        .padding(12)
+        .frame(width: 220)
     }
 }

@@ -14,6 +14,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.statusBarController = StatusBarController(noteStore: noteStore)
 
         setupStandardMenus()
+
+        VisualTester.runVisualTests(store: noteStore)
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
