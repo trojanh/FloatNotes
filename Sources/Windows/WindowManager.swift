@@ -8,6 +8,7 @@ final class WindowManager: NSObject, NSWindowDelegate {
     private var noteStore: NoteStore!
     private var panels: [UUID: FloatingNotePanel] = [:]
     private var noteObservables: [UUID: NoteObservable] = [:]
+    private var noteCancellables: [UUID: AnyCancellable] = [:]
     private var allNotesWindow: NSWindow?
     private var cancellables = Set<AnyCancellable>()
 
@@ -35,18 +36,14 @@ final class WindowManager: NSObject, NSWindowDelegate {
             panel.close()
             panels.removeValue(forKey: id)
             noteObservables.removeValue(forKey: id)
+            noteCancellables.removeValue(forKey: id)
         }
 
         // Add or update existing windows
         for note in notes {
             if let obs = noteObservables[note.id] {
-                // Update observable model if changed from elsewhere (e.g. from AllNotesView)
-                if obs.note.status != note.status ||
-                   obs.note.color != note.color ||
-                   obs.note.fontSize != note.fontSize ||
-                   obs.note.fontDesign != note.fontDesign ||
-                   obs.note.opacity != note.opacity ||
-                   obs.note.isPinnedOnTop != note.isPinnedOnTop {
+                // Update observable model if changed externally (avoid loop if text is identical)
+                if obs.note != note {
                     obs.note = note
                 }
             }
@@ -83,13 +80,14 @@ final class WindowManager: NSObject, NSWindowDelegate {
         let observable = NoteObservable(note: note)
         noteObservables[note.id] = observable
 
-        // Observe changes inside the note card and persist asynchronously
-        observable.$note
+        // Observe text/state changes from inside the card, debounce them, and update storage cleanly without synchronous re-entry
+        let sub = observable.$note
             .dropFirst()
+            .debounce(for: .milliseconds(300), scheduler: RunLoop.main)
             .sink { [weak self] updatedNote in
                 self?.noteStore.updateNote(updatedNote)
             }
-            .store(in: &cancellables)
+        noteCancellables[note.id] = sub
 
         let cardView = NoteCardView(
             noteModel: observable,
