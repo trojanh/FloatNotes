@@ -193,8 +193,25 @@ struct AllNotesView: View {
 
     private func noteGridCard(note: StickyNote) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Card Header
-            HStack {
+            // Card Header: Consistent layout with Floating Note! (Pin on left, then Status, then Delete on right)
+            HStack(spacing: 6) {
+                // Pin toggle (Matching left position)
+                Button(action: {
+                    var updated = note
+                    updated.isPinnedOnTop.toggle()
+                    WindowManager.shared.updatePanelLevel(for: note.id, isPinned: updated.isPinnedOnTop)
+                    store.updateNote(updated, immediateSave: true)
+                }) {
+                    Image(systemName: note.isPinnedOnTop ? "pin.fill" : "pin.slash")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(note.isPinnedOnTop ? .accentColor : note.color.secondaryTextColor)
+                        .padding(3)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help(note.isPinnedOnTop ? "Unpin from Always on Top" : "Pin to Always on Top")
+
+                // Status Badge (todo, doing, done)
                 StatusBadgeView(status: Binding(
                     get: { note.status },
                     set: { newStatus in
@@ -207,28 +224,12 @@ struct AllNotesView: View {
 
                 Spacer()
 
-                // Pin toggle
-                Button(action: {
-                    var updated = note
-                    updated.isPinnedOnTop.toggle()
-                    WindowManager.shared.updatePanelLevel(for: note.id, isPinned: updated.isPinnedOnTop)
-                    store.updateNote(updated, immediateSave: true)
-                }) {
-                    Image(systemName: note.isPinnedOnTop ? "pin.fill" : "pin.slash")
-                        .font(.system(size: 11))
-                        .foregroundColor(note.isPinnedOnTop ? .accentColor : note.color.secondaryTextColor)
-                        .padding(3)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .help(note.isPinnedOnTop ? "Unpin from Always on Top" : "Pin to Always on Top")
-
-                // Delete
+                // Delete (Matching right position)
                 Button(action: {
                     store.deleteNote(id: note.id)
                 }) {
-                    Image(systemName: "trash")
-                        .font(.system(size: 11))
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 12))
                         .foregroundColor(note.color.secondaryTextColor.opacity(0.7))
                         .padding(3)
                         .contentShape(Rectangle())
@@ -253,10 +254,16 @@ struct AllNotesView: View {
                 .opacity(0.12)
                 .padding(.horizontal, 8)
 
-            // Card Footer
+            // Card Footer: AI Send Menu (Gemini, ChatGPT, Claude, Perplexity) & Open
             HStack(spacing: 6) {
                 // Send to AI Menu
                 Menu {
+                    Button(action: {
+                        AIService.sendToGemini(text: note.text)
+                    }) {
+                        Label("Google Gemini", systemImage: "sparkle")
+                    }
+
                     Button(action: {
                         AIService.sendToChatGPT(text: note.text)
                     }) {
@@ -267,6 +274,12 @@ struct AllNotesView: View {
                         AIService.sendToClaude(text: note.text)
                     }) {
                         Label("Claude", systemImage: "brain.head.profile")
+                    }
+
+                    Button(action: {
+                        AIService.sendToPerplexity(text: note.text)
+                    }) {
+                        Label("Perplexity", systemImage: "magnifyingglass.circle.fill")
                     }
                 } label: {
                     HStack(spacing: 3) {

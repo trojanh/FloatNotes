@@ -17,6 +17,33 @@ enum AIDestination: String, CaseIterable, Codable, Identifiable {
     }
 }
 
+enum AIProvider: String, CaseIterable, Codable, Identifiable {
+    case gemini = "gemini"
+    case chatgpt = "chatgpt"
+    case claude = "claude"
+    case perplexity = "perplexity"
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .gemini: return "Google Gemini"
+        case .chatgpt: return "ChatGPT"
+        case .claude: return "Claude"
+        case .perplexity: return "Perplexity"
+        }
+    }
+
+    var iconName: String {
+        switch self {
+        case .gemini: return "sparkle"
+        case .chatgpt: return "sparkles"
+        case .claude: return "brain.head.profile"
+        case .perplexity: return "magnifyingglass.circle.fill"
+        }
+    }
+}
+
 final class AIService: ObservableObject {
     static let shared = AIService()
 
@@ -52,49 +79,73 @@ final class AIService: ObservableObject {
         return NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.anthropic.claudefordesktop") != nil
     }
 
-    static func sendToChatGPT(text: String, destination: AIDestination? = nil) {
+    static func send(to provider: AIProvider, text: String, destination: AIDestination? = nil) {
         copyToClipboard(text: text)
         let mode = destination ?? shared.preferredDestination
-
-        if mode == .desktopApp || (mode == .automatic && isChatGPTAppInstalled) {
-            if let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.openai.chat") {
-                NSWorkspace.shared.openApplication(at: appURL, configuration: NSWorkspace.OpenConfiguration())
-                return
-            } else if let schemeURL = URL(string: chatGPTAppScheme),
-                      NSWorkspace.shared.urlForApplication(toOpen: schemeURL) != nil {
-                NSWorkspace.shared.open(schemeURL)
-                return
-            }
-        }
-
-        // Open Web
         let encoded = text.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-        if let webURL = URL(string: "https://chatgpt.com/?q=\(encoded)") {
-            NSWorkspace.shared.open(webURL)
+
+        switch provider {
+        case .gemini:
+            // Google Gemini Web
+            let urlString = "https://gemini.google.com/app"
+            if let url = URL(string: urlString) {
+                NSWorkspace.shared.open(url)
+            }
+
+        case .chatgpt:
+            if mode == .desktopApp || (mode == .automatic && isChatGPTAppInstalled) {
+                if let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.openai.chat") {
+                    NSWorkspace.shared.openApplication(at: appURL, configuration: NSWorkspace.OpenConfiguration())
+                    return
+                } else if let schemeURL = URL(string: chatGPTAppScheme),
+                          NSWorkspace.shared.urlForApplication(toOpen: schemeURL) != nil {
+                    NSWorkspace.shared.open(schemeURL)
+                    return
+                }
+            }
+            if let webURL = URL(string: "https://chatgpt.com/?q=\(encoded)") {
+                NSWorkspace.shared.open(webURL)
+            }
+
+        case .claude:
+            if mode == .desktopApp || (mode == .automatic && isClaudeAppInstalled) {
+                if let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.anthropic.claudefordesktop") {
+                    NSWorkspace.shared.openApplication(at: appURL, configuration: NSWorkspace.OpenConfiguration())
+                    return
+                } else if let schemeURL = URL(string: claudeAppScheme),
+                          NSWorkspace.shared.urlForApplication(toOpen: schemeURL) != nil {
+                    NSWorkspace.shared.open(schemeURL)
+                    return
+                }
+            }
+            let target = encoded.isEmpty ? "https://claude.ai/new" : "https://claude.ai/new?q=\(encoded)"
+            if let webURL = URL(string: target) {
+                NSWorkspace.shared.open(webURL)
+            }
+
+        case .perplexity:
+            let urlString = encoded.isEmpty ? "https://www.perplexity.ai" : "https://www.perplexity.ai/search?q=\(encoded)"
+            if let webURL = URL(string: urlString) {
+                NSWorkspace.shared.open(webURL)
+            }
         }
     }
 
+    // Convenience helpers
+    static func sendToChatGPT(text: String, destination: AIDestination? = nil) {
+        send(to: .chatgpt, text: text, destination: destination)
+    }
+
     static func sendToClaude(text: String, destination: AIDestination? = nil) {
-        copyToClipboard(text: text)
-        let mode = destination ?? shared.preferredDestination
+        send(to: .claude, text: text, destination: destination)
+    }
 
-        if mode == .desktopApp || (mode == .automatic && isClaudeAppInstalled) {
-            if let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.anthropic.claudefordesktop") {
-                NSWorkspace.shared.openApplication(at: appURL, configuration: NSWorkspace.OpenConfiguration())
-                return
-            } else if let schemeURL = URL(string: claudeAppScheme),
-                      NSWorkspace.shared.urlForApplication(toOpen: schemeURL) != nil {
-                NSWorkspace.shared.open(schemeURL)
-                return
-            }
-        }
+    static func sendToGemini(text: String, destination: AIDestination? = nil) {
+        send(to: .gemini, text: text, destination: destination)
+    }
 
-        // Open Web
-        let encoded = text.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-        let target = encoded.isEmpty ? "https://claude.ai/new" : "https://claude.ai/new?q=\(encoded)"
-        if let webURL = URL(string: target) {
-            NSWorkspace.shared.open(webURL)
-        }
+    static func sendToPerplexity(text: String, destination: AIDestination? = nil) {
+        send(to: .perplexity, text: text, destination: destination)
     }
 
     private static func copyToClipboard(text: String) {

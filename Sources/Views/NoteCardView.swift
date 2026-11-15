@@ -322,13 +322,31 @@ struct NoteCardView: View {
                 .replacingOccurrences(of: "☑ ", with: "- [x] ")
 
             Button(action: {
+                AIService.sendToGemini(text: clean)
+                showAIMenu = false
+            }) {
+                HStack(spacing: 8) {
+                    Image(systemName: "sparkle")
+                        .foregroundColor(.blue)
+                    Text("Google Gemini")
+                        .font(.system(size: 12, weight: .medium))
+                    Spacer()
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 5)
+                .background(Color.primary.opacity(0.04))
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+            }
+            .buttonStyle(.plain)
+
+            Button(action: {
                 AIService.sendToChatGPT(text: clean)
                 showAIMenu = false
             }) {
                 HStack(spacing: 8) {
                     Image(systemName: "sparkles")
                         .foregroundColor(.purple)
-                    Text("Send to ChatGPT")
+                    Text("ChatGPT")
                         .font(.system(size: 12, weight: .medium))
                     Spacer()
                 }
@@ -346,7 +364,25 @@ struct NoteCardView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "brain.head.profile")
                         .foregroundColor(.orange)
-                    Text("Send to Claude")
+                    Text("Claude")
+                        .font(.system(size: 12, weight: .medium))
+                    Spacer()
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 5)
+                .background(Color.primary.opacity(0.04))
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+            }
+            .buttonStyle(.plain)
+
+            Button(action: {
+                AIService.sendToPerplexity(text: clean)
+                showAIMenu = false
+            }) {
+                HStack(spacing: 8) {
+                    Image(systemName: "magnifyingglass.circle.fill")
+                        .foregroundColor(.teal)
+                    Text("Perplexity")
                         .font(.system(size: 12, weight: .medium))
                     Spacer()
                 }
