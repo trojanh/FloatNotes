@@ -10,7 +10,19 @@ struct NoteCardView: View {
     @State private var showAIMenu: Bool = false
     @State private var showCopiedBanner: Bool = false
     @State private var showDeleteConfirmation: Bool = false
+    @State private var showSmartActionSheet: Bool = false
+    @State private var smartAlertMessage: String? = nil
+
     @ObservedObject private var aiService = AIService.shared
+    @ObservedObject private var speechService = SpeechService.shared
+
+    // Check if macOS 15+ Apple Intelligence / Writing Tools is available
+    var isAppleIntelligenceAvailable: Bool {
+        if #available(macOS 15.0, *) {
+            return true
+        }
+        return false
+    }
 
     var currentNSFont: NSFont {
         let size = CGFloat(noteModel.note.fontSize)
@@ -45,7 +57,7 @@ struct NoteCardView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Top Header: Pin, Status Badge, View All Notes, Options, Close
+            // Top Header: Pin, Status Badge, Smart Suggestion, View All Notes, Options, Close
             HStack(spacing: 6) {
                 // Pin Button
                 Button(action: onTogglePin) {
@@ -62,6 +74,20 @@ struct NoteCardView: View {
                 StatusBadgeView(status: $noteModel.note.status)
 
                 Spacer()
+
+                // Smart Categorization & Calendar/Reminder Quick Action
+                Button(action: { showSmartActionSheet.toggle() }) {
+                    Image(systemName: "wand.and.stars")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(noteModel.note.color.secondaryTextColor)
+                        .padding(4)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help("Smart Actions (Categorize, Reminders, Calendar)")
+                .popover(isPresented: $showSmartActionSheet, arrowEdge: .bottom) {
+                    smartActionsPopover
+                }
 
                 // View All Notes Button
                 Button(action: {
@@ -103,40 +129,7 @@ struct NoteCardView: View {
                 .buttonStyle(.plain)
                 .help("Delete Sticky Note")
                 .popover(isPresented: $showDeleteConfirmation, arrowEdge: .bottom) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Delete Sticky Note?")
-                            .font(.system(size: 12, weight: .bold))
-
-                        Text("This action cannot be undone.")
-                            .font(.system(size: 11))
-                            .foregroundColor(.secondary)
-
-                        HStack(spacing: 8) {
-                            Button("Cancel") {
-                                showDeleteConfirmation = false
-                            }
-                            .buttonStyle(.plain)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color.primary.opacity(0.06))
-                            .clipShape(RoundedRectangle(cornerRadius: 6))
-
-                            Spacer()
-
-                            Button("Delete") {
-                                showDeleteConfirmation = false
-                                onDelete()
-                            }
-                            .buttonStyle(.plain)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 4)
-                            .background(Color.red)
-                            .foregroundColor(.white)
-                            .clipShape(RoundedRectangle(cornerRadius: 6))
-                        }
-                    }
-                    .padding(12)
-                    .frame(width: 200)
+                    deleteConfirmationPopover
                 }
             }
             .padding(.horizontal, 10)
@@ -153,12 +146,13 @@ struct NoteCardView: View {
                 .padding(.horizontal, 8)
                 .padding(.vertical, 2)
 
+                // Copied / Smart Alert Banner
                 if showCopiedBanner {
-                    Text("Copied as Clean Text!")
+                    Text(smartAlertMessage ?? "Copied as Clean Text!")
                         .font(.system(size: 10, weight: .semibold))
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
-                        .background(Color.black.opacity(0.75))
+                        .background(Color.black.opacity(0.80))
                         .foregroundColor(.white)
                         .clipShape(Capsule())
                         .transition(.opacity.combined(with: .scale))
@@ -171,7 +165,7 @@ struct NoteCardView: View {
                 .opacity(0.15)
                 .padding(.horizontal, 8)
 
-            // Always Visible Bottom Footer: List controls, Copy, Font controls & AI Send
+            // Always Visible Bottom Footer: List controls, Voice Dictation, Copy, Font controls & AI Send
             HStack(spacing: 7) {
                 // Interactive Checklist button
                 Button(action: insertChecklist) {
@@ -195,6 +189,17 @@ struct NoteCardView: View {
                 .buttonStyle(.plain)
                 .help("Insert Bullet (•)")
 
+                // Voice Dictation Scratchpad
+                Button(action: toggleVoiceDictation) {
+                    Image(systemName: speechService.isRecording ? "mic.fill" : "mic")
+                        .font(.system(size: 11))
+                        .foregroundColor(speechService.isRecording ? .red : noteModel.note.color.secondaryTextColor)
+                        .padding(3)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help(speechService.isRecording ? "Stop Voice Dictation" : "Voice Dictation Scratchpad")
+
                 // Copy Clean Text Button
                 Button(action: copyCleanText) {
                     Image(systemName: "doc.on.doc")
@@ -217,7 +222,7 @@ struct NoteCardView: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .help("Smaller Text")
+                .help("Smaller Text (⌘-)")
 
                 // Font size increment
                 Button(action: {
@@ -230,7 +235,7 @@ struct NoteCardView: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .help("Larger Text")
+                .help("Larger Text (⌘+)")
 
                 Spacer()
 
@@ -255,7 +260,7 @@ struct NoteCardView: View {
                     )
                 }
                 .buttonStyle(.plain)
-                .help("Send Note Content to ChatGPT or Claude")
+                .help("Send Note Content to Gemini, ChatGPT, Claude, or Perplexity")
                 .popover(isPresented: $showAIMenu, arrowEdge: .top) {
                     aiDispatchPopover
                 }
@@ -284,7 +289,6 @@ struct NoteCardView: View {
     }
 
     private func insertChecklist() {
-        // Appends or inserts clean checklist item
         if noteModel.note.text.isEmpty {
             noteModel.note.text = "☐ "
         } else if noteModel.note.text.hasSuffix("\n") {
@@ -304,8 +308,30 @@ struct NoteCardView: View {
         }
     }
 
+    private func toggleVoiceDictation() {
+        if speechService.isRecording {
+            speechService.stopRecording()
+            showBanner(message: "Dictation ended")
+        } else {
+            speechService.requestAuthorization { granted in
+                if granted {
+                    let initialText = self.noteModel.note.text
+                    self.speechService.startRecording { spoken in
+                        if initialText.isEmpty {
+                            self.noteModel.note.text = spoken
+                        } else {
+                            self.noteModel.note.text = "\(initialText)\n\(spoken)"
+                        }
+                    }
+                    self.showBanner(message: "Listening...")
+                } else {
+                    self.showBanner(message: "Mic Permission Denied")
+                }
+            }
+        }
+    }
+
     private func copyCleanText() {
-        // Copies cleanly: converts unicode checkboxes to standard markdown [ ] / [x] for external apps
         let cleanText = noteModel.note.text
             .replacingOccurrences(of: "☐ ", with: "- [ ] ")
             .replacingOccurrences(of: "☑ ", with: "- [x] ")
@@ -313,15 +339,170 @@ struct NoteCardView: View {
         let pb = NSPasteboard.general
         pb.clearContents()
         pb.setString(cleanText, forType: .string)
+        showBanner(message: "Copied as Clean Text!")
+    }
 
+    private func showBanner(message: String) {
+        smartAlertMessage = message
         withAnimation {
             showCopiedBanner = true
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             withAnimation {
                 showCopiedBanner = false
             }
         }
+    }
+
+    // MARK: - Smart Actions Popover (Categorization + Calendar / Reminders)
+    private var smartActionsPopover: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Image(systemName: "wand.and.stars")
+                    .foregroundColor(.accentColor)
+                Text("Smart Actions")
+                    .font(.system(size: 12, weight: .bold))
+            }
+
+            // Apple Intelligence Writing Tools Banner if available
+            if isAppleIntelligenceAvailable {
+                HStack(spacing: 6) {
+                    Image(systemName: "apple.intelligence")
+                        .foregroundColor(.purple)
+                    Text("Apple Intelligence Writing Tools active: Select text & right-click for proofread/rewrite.")
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                }
+                .padding(6)
+                .background(Color.purple.opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+            }
+
+            Divider()
+
+            // 1. Smart Categorization
+            if let suggestion = SmartCategorizationService.analyze(text: noteModel.note.text) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Smart Suggestion")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(.secondary)
+
+                    Button(action: {
+                        if let s = suggestion.status { noteModel.note.status = s }
+                        if let c = suggestion.color { noteModel.note.color = c }
+                        showSmartActionSheet = false
+                        showBanner(message: "Applied: \(suggestion.tagDescription)")
+                    }) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "tag.fill")
+                                .font(.system(size: 10))
+                            Text(suggestion.tagDescription)
+                                .font(.system(size: 11, weight: .medium))
+                            Spacer()
+                            Text("Apply")
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundColor(.accentColor)
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 6)
+                        .background(Color.primary.opacity(0.05))
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            // 2. Calendar / Reminder Extraction
+            let detected = CalendarReminderService.shared.detectDates(in: noteModel.note.text)
+            VStack(alignment: .leading, spacing: 6) {
+                Text(detected.isEmpty ? "Reminders & Calendar" : "Detected Dates (\(detected.count))")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(.secondary)
+
+                if let first = detected.first, let date = first.date {
+                    Button(action: {
+                        CalendarReminderService.shared.addToCalendar(title: noteModel.note.text.components(separatedBy: .newlines).first ?? "Event", startDate: date) { success, _ in
+                            showSmartActionSheet = false
+                            showBanner(message: success ? "Added to Apple Calendar!" : "Calendar failed")
+                        }
+                    }) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "calendar.badge.plus")
+                                .foregroundColor(.red)
+                            Text("Add to Calendar (\(first.text))")
+                                .font(.system(size: 11))
+                            Spacer()
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 5)
+                        .background(Color.primary.opacity(0.04))
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                Button(action: {
+                    let firstLine = noteModel.note.text.components(separatedBy: .newlines).first ?? "Task"
+                    let dueDate = detected.first?.date
+                    CalendarReminderService.shared.addToReminders(title: firstLine, dueDate: dueDate) { success, _ in
+                        showSmartActionSheet = false
+                        showBanner(message: success ? "Saved to Reminders!" : "Reminders failed")
+                    }
+                }) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "checklist.checked")
+                            .foregroundColor(.blue)
+                        Text("Save as Apple Reminder")
+                            .font(.system(size: 11))
+                        Spacer()
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 5)
+                    .background(Color.primary.opacity(0.04))
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(12)
+        .frame(width: 250)
+    }
+
+    private var deleteConfirmationPopover: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Delete Sticky Note?")
+                .font(.system(size: 12, weight: .bold))
+
+            Text("This action cannot be undone.")
+                .font(.system(size: 11))
+                .foregroundColor(.secondary)
+
+            HStack(spacing: 8) {
+                Button("Cancel") {
+                    showDeleteConfirmation = false
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Color.primary.opacity(0.06))
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+
+                Spacer()
+
+                Button("Delete") {
+                    showDeleteConfirmation = false
+                    onDelete()
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .background(Color.red)
+                .foregroundColor(.white)
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+            }
+        }
+        .padding(12)
+        .frame(width: 200)
     }
 
     private var aiDispatchPopover: some View {

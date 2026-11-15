@@ -41,6 +41,12 @@ struct CustomTextEditor: NSViewRepresentable {
         textView.isRichText = false
         textView.delegate = context.coordinator
 
+        // macOS 15+ Native Apple Intelligence Writing Tools Integration
+        if #available(macOS 15.0, *) {
+            textView.writingToolsBehavior = .complete
+            textView.allowedWritingToolsResultOptions = [.plainText]
+        }
+
         scrollView.documentView = textView
         return scrollView
     }
