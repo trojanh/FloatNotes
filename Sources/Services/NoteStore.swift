@@ -6,10 +6,26 @@ final class NoteStore: ObservableObject {
     @Published var notes: [StickyNote] = []
     @Published var areAllNotesHidden: Bool = false
 
+    @Published var defaultNoteWidth: Double {
+        didSet {
+            UserDefaults.standard.set(defaultNoteWidth, forKey: "defaultNoteWidth")
+        }
+    }
+    @Published var defaultNoteHeight: Double {
+        didSet {
+            UserDefaults.standard.set(defaultNoteHeight, forKey: "defaultNoteHeight")
+        }
+    }
+
     private let fileURL: URL
     private var saveWorkItem: DispatchWorkItem?
 
     init() {
+        let savedW = UserDefaults.standard.double(forKey: "defaultNoteWidth")
+        let savedH = UserDefaults.standard.double(forKey: "defaultNoteHeight")
+        self.defaultNoteWidth = savedW > 0 ? savedW : 260
+        self.defaultNoteHeight = savedH > 0 ? savedH : 280
+
         let fileManager = FileManager.default
         let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
         let dir = appSupport.appendingPathComponent("FloatingNotes", isDirectory: true)
@@ -60,7 +76,7 @@ final class NoteStore: ObservableObject {
     }
 
     @discardableResult
-    func createNote(initialText: String = "", isVisible: Bool = true, offset: CGPoint? = nil) -> StickyNote {
+    func createNote(initialText: String = "", isVisible: Bool = true, isPinned: Bool = true, offset: CGPoint? = nil) -> StickyNote {
         let baseCount = notes.count
         let defaultX = 200.0 + Double((baseCount % 6) * 30)
         let defaultY = 250.0 + Double((baseCount % 6) * 30)
@@ -68,6 +84,9 @@ final class NoteStore: ObservableObject {
         var newNote = StickyNote()
         newNote.text = initialText
         newNote.isVisible = isVisible
+        newNote.isPinnedOnTop = isPinned
+        newNote.width = defaultNoteWidth
+        newNote.height = defaultNoteHeight
         newNote.x = offset?.x != nil ? Double(offset!.x) : defaultX
         newNote.y = offset?.y != nil ? Double(offset!.y) : defaultY
 
@@ -100,6 +119,13 @@ final class NoteStore: ObservableObject {
         areAllNotesHidden = false
         for i in 0..<notes.count {
             notes[i].isVisible = true
+        }
+        saveNow()
+    }
+
+    func unpinAllNotes() {
+        for i in 0..<notes.count {
+            notes[i].isPinnedOnTop = false
         }
         saveNow()
     }

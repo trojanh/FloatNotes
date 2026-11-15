@@ -70,6 +70,24 @@ final class WindowManager: NSObject, NSWindowDelegate {
         }
     }
 
+    func unpinAllNotes() {
+        for (id, panel) in panels {
+            panel.updateLevel(isPinned: false)
+            if let obs = noteObservables[id] {
+                obs.note.isPinnedOnTop = false
+            }
+        }
+        noteStore.unpinAllNotes()
+    }
+
+    func hideNote(id: UUID) {
+        if var note = noteStore.notes.first(where: { $0.id == id }) {
+            note.isVisible = false
+            noteStore.updateNote(note, immediateSave: true)
+        }
+        panels[id]?.orderOut(nil)
+    }
+
     func updatePanelOpacity(for id: UUID, opacity: Double) {
         panels[id]?.updateOpacity(opacity)
     }

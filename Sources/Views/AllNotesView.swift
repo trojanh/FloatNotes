@@ -9,6 +9,7 @@ struct AllNotesView: View {
     @State private var filterStatus: String = "ALL"
     @State private var searchText: String = ""
     @State private var noteToDelete: UUID? = nil
+    @State private var showSizeSettings: Bool = false
 
     var filteredNotes: [StickyNote] {
         store.notes.filter { note in
@@ -124,9 +125,52 @@ struct AllNotesView: View {
                             .stroke(Color.white.opacity(0.2), lineWidth: 0.8)
                     )
 
-                    // Modern Glowing New Note CTA
+                    // Unpin All Button
                     Button(action: {
-                        _ = store.createNote(initialText: "New Note", isVisible: false)
+                        withAnimation {
+                            WindowManager.shared.unpinAllNotes()
+                        }
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "pin.slash")
+                                .font(.system(size: 10))
+                            Text("Unpin All")
+                                .font(.system(size: 11, weight: .medium, design: .rounded))
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.white.opacity(0.12))
+                        .clipShape(Capsule())
+                        .overlay(
+                            Capsule()
+                                .stroke(Color.white.opacity(0.25), lineWidth: 0.8)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .help("Unpin all currently pinned floating notes")
+
+                    // Default Note Size Settings Popover
+                    Button(action: { showSizeSettings.toggle() }) {
+                        Image(systemName: "aspectratio")
+                            .font(.system(size: 12))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 4)
+                            .background(Color.white.opacity(0.12))
+                            .clipShape(Capsule())
+                            .overlay(
+                                Capsule()
+                                    .stroke(Color.white.opacity(0.25), lineWidth: 0.8)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .help("Default Note Size & Shape Settings")
+                    .popover(isPresented: $showSizeSettings, arrowEdge: .bottom) {
+                        defaultSizeSettingsPopover
+                    }
+
+                    // Modern Glowing New Note CTA (Creates unpinned note in View All)
+                    Button(action: {
+                        _ = store.createNote(initialText: "New Note", isVisible: false, isPinned: false)
                     }) {
                         HStack(spacing: 5) {
                             Image(systemName: "plus")
@@ -152,6 +196,7 @@ struct AllNotesView: View {
                         .shadow(color: Color.blue.opacity(0.3), radius: 6, x: 0, y: 2)
                     }
                     .buttonStyle(.plain)
+                    .help("Create a new note in View All (unpinned by default)")
                 }
                 .padding(.horizontal, 22)
                 .padding(.top, 18)
@@ -202,7 +247,7 @@ struct AllNotesView: View {
                                         .foregroundColor(.secondary)
                                 }
 
-                                LazyVGrid(columns: [GridItem(.adaptive(minimum: 220, maximum: 260), spacing: 16)], spacing: 16) {
+                                LazyVGrid(columns: [GridItem(.adaptive(minimum: 200, maximum: 240), spacing: 12)], spacing: 12) {
                                     ForEach(pinnedNotes) { note in
                                         noteGridCard(note: note)
                                     }
@@ -224,7 +269,7 @@ struct AllNotesView: View {
                                         .foregroundColor(.secondary)
                                 }
 
-                                LazyVGrid(columns: [GridItem(.adaptive(minimum: 220, maximum: 260), spacing: 16)], spacing: 16) {
+                                LazyVGrid(columns: [GridItem(.adaptive(minimum: 200, maximum: 240), spacing: 12)], spacing: 12) {
                                     ForEach(unpinnedNotes) { note in
                                         noteGridCard(note: note)
                                     }
@@ -287,7 +332,7 @@ struct AllNotesView: View {
     private func noteGridCard(note: StickyNote) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             // Header Bar
-            HStack(spacing: 6) {
+            HStack(spacing: 5) {
                 // Pin Button
                 Button(action: {
                     var updated = note
@@ -296,9 +341,9 @@ struct AllNotesView: View {
                     store.updateNote(updated, immediateSave: true)
                 }) {
                     Image(systemName: note.isPinnedOnTop ? "pin.fill" : "pin.slash")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.system(size: 10, weight: .semibold))
                         .foregroundColor(note.isPinnedOnTop ? .accentColor : note.color.secondaryTextColor)
-                        .padding(4)
+                        .padding(3)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -322,7 +367,7 @@ struct AllNotesView: View {
                     noteToDelete = note.id
                 }) {
                     Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 12))
+                        .font(.system(size: 11))
                         .foregroundColor(note.color.secondaryTextColor.opacity(0.6))
                         .padding(3)
                         .contentShape(Rectangle())
@@ -370,11 +415,11 @@ struct AllNotesView: View {
                     .frame(width: 200)
                 }
             }
-            .padding(.horizontal, 10)
-            .padding(.top, 9)
-            .padding(.bottom, 6)
+            .padding(.horizontal, 8)
+            .padding(.top, 6)
+            .padding(.bottom, 4)
 
-            // Editable Note Text with zero opacity container
+            // Editable Note Text with zero opacity container (compact preview)
             TextEditor(text: Binding(
                 get: { note.text },
                 set: { newText in
@@ -383,17 +428,17 @@ struct AllNotesView: View {
                     store.updateNote(updated)
                 }
             ))
-            .font(.system(size: 12))
+            .font(.system(size: 11))
             .foregroundColor(note.color.textColor)
             .scrollContentBackground(.hidden)
-            .padding(.horizontal, 8)
+            .padding(.horizontal, 6)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             Divider()
                 .opacity(0.12)
-                .padding(.horizontal, 8)
+                .padding(.horizontal, 6)
 
-            // Card Footer
+            // Compact Card Footer
             HStack(spacing: 6) {
                 // Send to AI Glass Pill Menu
                 Menu {
@@ -421,14 +466,14 @@ struct AllNotesView: View {
                         Label("Perplexity", systemImage: "magnifyingglass.circle.fill")
                     }
                 } label: {
-                    HStack(spacing: 3) {
+                    HStack(spacing: 2) {
                         Image(systemName: "paperplane.fill")
-                            .font(.system(size: 8))
-                        Text("Send to AI")
-                            .font(.system(size: 10, weight: .medium, design: .rounded))
+                            .font(.system(size: 7))
+                        Text("AI")
+                            .font(.system(size: 9, weight: .medium, design: .rounded))
                     }
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 3)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
                     .background(Color.white.opacity(0.18))
                     .foregroundColor(note.color.textColor.opacity(0.85))
                     .clipShape(Capsule())
@@ -446,14 +491,14 @@ struct AllNotesView: View {
                 Button(action: {
                     onSelectNote(note.id)
                 }) {
-                    HStack(spacing: 4) {
+                    HStack(spacing: 3) {
                         Text(note.isVisible ? "Float" : "Open")
-                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .font(.system(size: 9, weight: .bold, design: .rounded))
                         Image(systemName: "arrow.up.forward.app")
-                            .font(.system(size: 8, weight: .bold))
+                            .font(.system(size: 7, weight: .bold))
                     }
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 3.5)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 2.5)
                     .background(
                         LinearGradient(
                             colors: [Color.blue, Color.purple],
@@ -467,16 +512,16 @@ struct AllNotesView: View {
                         Capsule()
                             .stroke(Color.white.opacity(0.4), lineWidth: 0.8)
                     )
-                    .shadow(color: Color.blue.opacity(0.3), radius: 3, x: 0, y: 1)
+                    .shadow(color: Color.blue.opacity(0.3), radius: 2, x: 0, y: 1)
                 }
                 .buttonStyle(.plain)
                 .help(note.isVisible ? "Bring floating card to front" : "Open as floating note")
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
             .background(Color.black.opacity(0.04))
         }
-        .frame(height: 165)
+        .frame(height: 120)
         .background(
             ZStack {
                 // Frosted Glass Layer
@@ -498,10 +543,10 @@ struct AllNotesView: View {
                 )
             }
         )
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(
             // Specular Rim Border
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .stroke(
                     LinearGradient(
                         gradient: Gradient(colors: [
@@ -516,7 +561,100 @@ struct AllNotesView: View {
                     lineWidth: 1
                 )
         )
-        .shadow(color: Color.black.opacity(0.12), radius: 8, x: 0, y: 3)
+        .shadow(color: Color.black.opacity(0.10), radius: 6, x: 0, y: 2)
+    }
+
+    private var defaultSizeSettingsPopover: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Image(systemName: "aspectratio")
+                    .foregroundColor(.accentColor)
+                Text("Default Note Size")
+                    .font(.system(size: 12, weight: .bold))
+            }
+
+            Text("Choose the default size and shape when creating new floating sticky notes:")
+                .font(.system(size: 10))
+                .foregroundColor(.secondary)
+
+            VStack(spacing: 6) {
+                // Compact Rectangle
+                sizeOptionRow(
+                    title: "Compact Rectangle",
+                    subtitle: "240 x 180 pt",
+                    icon: "rectangle",
+                    width: 240,
+                    height: 180
+                )
+
+                // Standard Note
+                sizeOptionRow(
+                    title: "Standard Sticky",
+                    subtitle: "260 x 280 pt",
+                    icon: "square",
+                    width: 260,
+                    height: 280
+                )
+
+                // Wide Card
+                sizeOptionRow(
+                    title: "Wide Landscape",
+                    subtitle: "320 x 220 pt",
+                    icon: "rectangle.ratio.16.9",
+                    width: 320,
+                    height: 220
+                )
+
+                // Large Canvas
+                sizeOptionRow(
+                    title: "Large Note",
+                    subtitle: "340 x 360 pt",
+                    icon: "viewfinder",
+                    width: 340,
+                    height: 360
+                )
+            }
+        }
+        .padding(12)
+        .frame(width: 230)
+    }
+
+    private func sizeOptionRow(title: String, subtitle: String, icon: String, width: Double, height: Double) -> some View {
+        let isSelected = (store.defaultNoteWidth == width && store.defaultNoteHeight == height)
+        return Button(action: {
+            store.defaultNoteWidth = width
+            store.defaultNoteHeight = height
+            showSizeSettings = false
+        }) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 14))
+                    .foregroundColor(isSelected ? .white : .secondary)
+                    .frame(width: 20)
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(title)
+                        .font(.system(size: 11, weight: isSelected ? .bold : .medium))
+                    Text(subtitle)
+                        .font(.system(size: 9))
+                        .foregroundColor(isSelected ? .white.opacity(0.8) : .secondary)
+                }
+
+                Spacer()
+
+                if isSelected {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(.white)
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(isSelected ? Color.accentColor : Color.primary.opacity(0.05))
+            .foregroundColor(isSelected ? .white : .primary)
+            .clipShape(RoundedRectangle(cornerRadius: 7))
+        }
+        .buttonStyle(.plain)
     }
 
     private func exportAction() {
