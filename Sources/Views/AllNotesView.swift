@@ -350,21 +350,35 @@ struct AllNotesView: View {
 
                 Spacer()
 
-                // Open / Float Note Button
+                // Open / Float Note Button with Apple Glass Capsule
                 Button(action: {
                     onSelectNote(note.id)
                 }) {
-                    HStack(spacing: 3) {
+                    HStack(spacing: 4) {
                         Text(note.isVisible ? "Float" : "Open")
-                            .font(.system(size: 10, weight: .semibold))
+                            .font(.system(size: 10, weight: .semibold, design: .rounded))
                         Image(systemName: "arrow.up.forward.app")
-                            .font(.system(size: 9))
+                            .font(.system(size: 8, weight: .bold))
                     }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(Color.accentColor)
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 3.5)
+                    .background(
+                        ZStack {
+                            Color.accentColor
+                            LinearGradient(
+                                colors: [Color.white.opacity(0.30), Color.clear],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        }
+                    )
                     .foregroundColor(.white)
                     .clipShape(Capsule())
+                    .overlay(
+                        Capsule()
+                            .stroke(Color.white.opacity(0.35), lineWidth: 0.8)
+                    )
+                    .shadow(color: Color.accentColor.opacity(0.35), radius: 3, x: 0, y: 1)
                 }
                 .buttonStyle(.plain)
                 .help(note.isVisible ? "Bring floating card to front" : "Open as floating note")
@@ -376,16 +390,44 @@ struct AllNotesView: View {
         .frame(height: 165)
         .background(
             ZStack {
+                // Frosted Glass Layer
+                VisualEffectBackground(material: .popover, blendingMode: .behindWindow)
+
+                // Translucent Pastel Tint
                 note.color.swiftUIColor
-                    .opacity(0.92)
+                    .opacity(0.65)
+
+                // Glass Specular Glare
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        Color.white.opacity(0.25),
+                        Color.white.opacity(0.04),
+                        Color.black.opacity(0.04)
+                    ]),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
             }
         )
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(Color.black.opacity(0.12), lineWidth: 1)
+            // Specular Rim Border
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(
+                    LinearGradient(
+                        gradient: Gradient(colors: [
+                            Color.white.opacity(0.70),
+                            Color.white.opacity(0.20),
+                            Color.black.opacity(0.08),
+                            Color.white.opacity(0.35)
+                        ]),
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
         )
-        .shadow(color: Color.black.opacity(0.09), radius: 4, x: 0, y: 2)
+        .shadow(color: Color.black.opacity(0.12), radius: 8, x: 0, y: 3)
     }
 
     private func exportAction() {
