@@ -1,5 +1,21 @@
 import Foundation
 
+enum NoteStatus: String, CaseIterable, Codable, Identifiable {
+    case todo = "TODO"
+    case inProgress = "IN PROGRESS"
+    case done = "DONE"
+
+    var id: String { rawValue }
+
+    var shortLabel: String {
+        switch self {
+        case .todo: return "TODO"
+        case .inProgress: return "DOING"
+        case .done: return "DONE"
+        }
+    }
+}
+
 enum NoteColor: String, CaseIterable, Codable, Identifiable {
     case yellow
     case white
@@ -42,6 +58,9 @@ struct StickyNote: Identifiable, Codable, Equatable {
     var y: Double = 200
     var width: Double = 260
     var height: Double = 260
+    
+    // Status
+    var status: NoteStatus = .todo
     
     // Customization
     var color: NoteColor = .yellow

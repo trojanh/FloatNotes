@@ -9,40 +9,79 @@ struct NoteCardView: View {
     @State private var isHovered: Bool = false
     @State private var showOptions: Bool = false
 
-    var currentFont: Font {
+    var currentNSFont: NSFont {
         let size = CGFloat(note.fontSize)
         switch note.fontDesign {
         case .standard:
-            return .system(size: size, weight: .regular, design: .default)
+            return NSFont.systemFont(ofSize: size)
         case .rounded:
-            return .system(size: size, weight: .regular, design: .rounded)
+            if let desc = NSFont.systemFont(ofSize: size).fontDescriptor.withDesign(.rounded),
+               let font = NSFont(descriptor: desc, size: size) {
+                return font
+            }
+            return NSFont.systemFont(ofSize: size)
         case .monospaced:
-            return .system(size: size, weight: .regular, design: .monospaced)
+            return NSFont.monospacedSystemFont(ofSize: size, weight: .regular)
         case .serif:
-            return .system(size: size, weight: .regular, design: .serif)
+            if let desc = NSFont.systemFont(ofSize: size).fontDescriptor.withDesign(.serif),
+               let font = NSFont(descriptor: desc, size: size) {
+                return font
+            }
+            return NSFont.systemFont(ofSize: size)
+        }
+    }
+
+    var currentNSColor: NSColor {
+        switch note.color {
+        case .graphite:
+            return NSColor.white.withAlphaComponent(0.95)
+        default:
+            return NSColor(calibratedRed: 0.15, green: 0.15, blue: 0.17, alpha: 1.0)
         }
     }
 
     var body: some View {
         VStack(spacing: 0) {
-            // Header bar (shows actions on hover or tap)
-            HStack(spacing: 8) {
+            // Header bar
+            HStack(spacing: 6) {
                 // Pin Button
                 Button(action: onTogglePin) {
                     Image(systemName: note.isPinnedOnTop ? "pin.fill" : "pin.slash")
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundColor(note.isPinnedOnTop ? .accentColor : note.color.secondaryTextColor)
-                        .padding(4)
+                        .padding(3)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .help(note.isPinnedOnTop ? "Float on Top (Active)" : "Standard Window Level")
+                .help(note.isPinnedOnTop ? "Always on Top (Active)" : "Standard Window Level")
+
+                // Status Badge (TODO, DOING, DONE)
+                StatusBadgeView(status: $note.status)
 
                 Spacer()
 
-                // Font size quick controls
+                // Quick List Buttons on Hover
                 if isHovered || showOptions {
                     HStack(spacing: 4) {
+                        // Insert Checklist
+                        Button(action: insertChecklist) {
+                            Image(systemName: "checklist")
+                                .font(.system(size: 11))
+                                .foregroundColor(note.color.secondaryTextColor)
+                        }
+                        .buttonStyle(.plain)
+                        .help("Insert Checklist Item")
+
+                        // Insert Bullet
+                        Button(action: insertBullet) {
+                            Image(systemName: "list.bullet")
+                                .font(.system(size: 11))
+                                .foregroundColor(note.color.secondaryTextColor)
+                        }
+                        .buttonStyle(.plain)
+                        .help("Insert Bullet Item")
+
+                        // Font size quick controls
                         Button(action: {
                             if note.fontSize > 11 { note.fontSize -= 1 }
                         }) {
@@ -62,17 +101,17 @@ struct NoteCardView: View {
                         }
                         .buttonStyle(.plain)
                         .help("Increase Font Size")
-                    }
 
-                    // Options popover button
-                    Button(action: { showOptions.toggle() }) {
-                        Image(systemName: "ellipsis.circle")
-                            .font(.system(size: 12))
-                            .foregroundColor(note.color.secondaryTextColor)
-                    }
-                    .buttonStyle(.plain)
-                    .popover(isPresented: $showOptions, arrowEdge: .bottom) {
-                        noteCustomizationPopover
+                        // Options & AI Popover
+                        Button(action: { showOptions.toggle() }) {
+                            Image(systemName: "ellipsis.circle")
+                                .font(.system(size: 12))
+                                .foregroundColor(note.color.secondaryTextColor)
+                        }
+                        .buttonStyle(.plain)
+                        .popover(isPresented: $showOptions, arrowEdge: .bottom) {
+                            noteOptionsPopover
+                        }
                     }
                 }
 
@@ -85,21 +124,22 @@ struct NoteCardView: View {
                 .buttonStyle(.plain)
                 .help("Delete Sticky Note")
             }
-            .padding(.horizontal, 12)
-            .padding(.top, 10)
+            .padding(.horizontal, 10)
+            .padding(.top, 8)
             .padding(.bottom, 6)
             .background(Color.clear)
 
-            // Plain text editor
-            TextEditor(text: $note.text)
-                .font(currentFont)
-                .foregroundColor(note.color.textColor)
-                .scrollContentBackground(.hidden)
-                .padding(.horizontal, 8)
-                .padding(.bottom, 10)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            // Plain text editor with smart bullet / checklist support
+            CustomTextEditor(
+                text: $note.text,
+                font: currentNSFont,
+                textColor: currentNSColor
+            )
+            .padding(.horizontal, 8)
+            .padding(.bottom, 8)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(minWidth: 180, minHeight: 180)
+        .frame(minWidth: 200, minHeight: 180)
         .background(
             ZStack {
                 VisualEffectBackground(
@@ -123,11 +163,66 @@ struct NoteCardView: View {
         }
     }
 
-    private var noteCustomizationPopover: some View {
+    private func insertChecklist() {
+        if note.text.isEmpty {
+            note.text = "- [ ] "
+        } else if note.text.hasSuffix("\n") {
+            note.text += "- [ ] "
+        } else {
+            note.text += "\n- [ ] "
+        }
+    }
+
+    private func insertBullet() {
+        if note.text.isEmpty {
+            note.text = "• "
+        } else if note.text.hasSuffix("\n") {
+            note.text += "• "
+        } else {
+            note.text += "\n• "
+        }
+    }
+
+    private var noteOptionsPopover: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Customize Card")
+            Text("Note Settings & Actions")
                 .font(.headline)
                 .padding(.bottom, 2)
+
+            // Send to AI Apps section
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Send to AI App")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                HStack(spacing: 8) {
+                    Button(action: {
+                        AIService.sendToChatGPT(text: note.text)
+                        showOptions = false
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "sparkles")
+                            Text("ChatGPT")
+                        }
+                        .font(.system(size: 11, weight: .medium))
+                    }
+                    .buttonStyle(.bordered)
+
+                    Button(action: {
+                        AIService.sendToClaude(text: note.text)
+                        showOptions = false
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "brain.head.profile")
+                            Text("Claude")
+                        }
+                        .font(.system(size: 11, weight: .medium))
+                    }
+                    .buttonStyle(.bordered)
+                }
+            }
+
+            Divider()
 
             // Color palette
             VStack(alignment: .leading, spacing: 6) {
@@ -182,6 +277,6 @@ struct NoteCardView: View {
             }
         }
         .padding(14)
-        .frame(width: 230)
+        .frame(width: 250)
     }
 }

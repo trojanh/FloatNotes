@@ -7,6 +7,7 @@ final class WindowManager: NSObject, NSWindowDelegate {
 
     private var noteStore: NoteStore!
     private var panels: [UUID: FloatingNotePanel] = [:]
+    private var allNotesWindow: NSWindow?
     private var cancellables = Set<AnyCancellable>()
 
     func configure(with store: NoteStore) {
@@ -103,6 +104,39 @@ final class WindowManager: NSObject, NSWindowDelegate {
             panel.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
         }
+    }
+
+    func showAllNotesWindow() {
+        if let existing = allNotesWindow {
+            existing.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+
+        let allNotesView = AllNotesView(
+            store: noteStore,
+            onSelectNote: { [weak self] id in
+                self?.allNotesWindow?.orderOut(nil)
+                self?.focusNote(id: id)
+            },
+            onClose: { [weak self] in
+                self?.allNotesWindow?.orderOut(nil)
+            }
+        )
+
+        let window = NSWindow(
+            contentRect: NSRect(x: 250, y: 250, width: 680, height: 480),
+            styleMask: [.titled, .closable, .resizable, .miniaturizable],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "All Sticky Notes"
+        window.center()
+        window.contentView = NSHostingView(rootView: allNotesView)
+        window.isReleasedWhenClosed = false
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        self.allNotesWindow = window
     }
 
     // Save frame on move/resize

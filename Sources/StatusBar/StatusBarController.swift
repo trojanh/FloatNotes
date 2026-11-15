@@ -74,6 +74,12 @@ final class StatusBarController: NSObject {
         newNoteItem.target = self
         menu.addItem(newNoteItem)
 
+        // View All Notes item
+        let allNotesItem = NSMenuItem(title: "View All Notes...", action: #selector(viewAllNotesAction), keyEquivalent: "o")
+        allNotesItem.keyEquivalentModifierMask = [.command, .shift]
+        allNotesItem.target = self
+        menu.addItem(allNotesItem)
+
         // Toggle visibility
         let toggleTitle = noteStore.areAllNotesHidden ? "Show All Notes" : "Hide All Notes"
         let toggleItem = NSMenuItem(title: toggleTitle, action: #selector(toggleVisibilityAction), keyEquivalent: "h")
@@ -119,6 +125,10 @@ final class StatusBarController: NSObject {
         }
         let created = noteStore.createNote()
         WindowManager.shared.focusNote(id: created.id)
+    }
+
+    @objc private func viewAllNotesAction() {
+        WindowManager.shared.showAllNotesWindow()
     }
 
     @objc private func toggleVisibilityAction() {
