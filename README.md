@@ -8,10 +8,6 @@ Designed with modern macOS translucency, clickable checklists, status tracking, 
 ![Swift 5.9+](https://img.shields.io/badge/Swift-5.9%2B-orange?logo=swift)
 ![License MIT](https://img.shields.io/badge/license-MIT-green)
 
-<p align="center">
-  <img src="docs/assets/demo.gif" alt="FloatNotes Demo Preview" width="760">
-</p>
-
 ---
 
 ## 🌟 Key Features
