@@ -259,6 +259,33 @@ struct AllNotesView: View {
                                     Text("• \(pinnedNotes.count)")
                                         .font(.system(size: 12, weight: .medium))
                                         .foregroundColor(.secondary)
+
+                                    Spacer()
+
+                                    // Stack Pinned Notes Button
+                                    Button(action: {
+                                        withAnimation {
+                                            WindowManager.shared.reorganizePinnedNotes()
+                                        }
+                                    }) {
+                                        HStack(spacing: 4) {
+                                            Image(systemName: "square.stack.3d.down.right.fill")
+                                                .font(.system(size: 9))
+                                            Text("Stack Pinned")
+                                                .font(.system(size: 10, weight: .semibold, design: .rounded))
+                                        }
+                                        .padding(.horizontal, 7)
+                                        .padding(.vertical, 3.5)
+                                        .background(Color.white.opacity(0.14))
+                                        .foregroundColor(.primary)
+                                        .clipShape(Capsule())
+                                        .overlay(
+                                            Capsule()
+                                                .stroke(Color.white.opacity(0.28), lineWidth: 0.8)
+                                        )
+                                    }
+                                    .buttonStyle(.plain)
+                                    .help("Reorganize pinned floating notes neatly stacked on screen in View All order")
                                 }
 
                                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 200, maximum: 240), spacing: 12)], spacing: 12) {
@@ -596,10 +623,10 @@ struct AllNotesView: View {
                 // Compact Rectangle
                 sizeOptionRow(
                     title: "Compact Rectangle",
-                    subtitle: "240 x 180 pt",
+                    subtitle: "300 x 150 pt",
                     icon: "rectangle",
-                    width: 240,
-                    height: 180
+                    width: 300,
+                    height: 150
                 )
 
                 // Standard Note

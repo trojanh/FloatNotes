@@ -138,6 +138,62 @@ final class WindowManager: NSObject, NSWindowDelegate {
         noteStore.unpinAllNotes()
     }
 
+    func reorganizePinnedNotes() {
+        // Collect pinned notes in their current View All display order
+        let pinnedNotes = noteStore.notes.filter { $0.isPinnedOnTop }
+        guard !pinnedNotes.isEmpty else { return }
+
+        // Find primary screen or current active screen visible frame
+        let screen = NSScreen.main ?? NSScreen.screens.first
+        let visibleFrame = screen?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
+
+        // Dock to the top right of the visible screen with padding
+        let rightPadding: CGFloat = 24.0
+        let topPadding: CGFloat = 20.0
+        let noteSpacing: CGFloat = 14.0
+
+        var currentTopY = visibleFrame.origin.y + visibleFrame.size.height - topPadding
+
+        for note in pinnedNotes {
+            let noteW = CGFloat(note.width)
+            let noteH = CGFloat(note.height)
+            let targetX = visibleFrame.origin.x + visibleFrame.size.width - noteW - rightPadding
+            let targetY = currentTopY - noteH
+
+            let targetFrame = NSRect(x: targetX, y: targetY, width: noteW, height: noteH)
+
+            // Ensure window exists and is visible
+            if let panel = panels[note.id] {
+                panel.setFrame(targetFrame, display: true, animate: true)
+                panel.updateLevel(isPinned: true)
+                panel.orderFront(nil)
+            } else {
+                var updated = note
+                updated.isVisible = true
+                updated.x = Double(targetX)
+                updated.y = Double(targetY)
+                createAndShowPanel(for: updated)
+            }
+
+            // Update observable and store coordinates
+            if let obs = noteObservables[note.id] {
+                obs.note.x = Double(targetX)
+                obs.note.y = Double(targetY)
+                obs.note.isVisible = true
+            }
+
+            if let idx = noteStore.notes.firstIndex(where: { $0.id == note.id }) {
+                noteStore.notes[idx].x = Double(targetX)
+                noteStore.notes[idx].y = Double(targetY)
+                noteStore.notes[idx].isVisible = true
+            }
+
+            currentTopY = targetY - noteSpacing
+        }
+
+        noteStore.saveNow()
+    }
+
     func hideNote(id: UUID) {
         if var note = noteStore.notes.first(where: { $0.id == id }) {
             note.isVisible = false

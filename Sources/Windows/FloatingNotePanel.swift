@@ -20,7 +20,7 @@ final class FloatingNotePanel: NSPanel {
         self.isOpaque = false
         self.backgroundColor = .clear
         self.hasShadow = true
-        self.minSize = NSSize(width: 200, height: 180)
+        self.minSize = NSSize(width: 180, height: 120)
         self.alphaValue = CGFloat(note.opacity)
 
         // Float across spaces/virtual desktops and full-screen apps

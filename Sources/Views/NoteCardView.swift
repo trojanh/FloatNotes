@@ -294,7 +294,7 @@ struct NoteCardView: View {
                 )
             )
         }
-        .frame(minWidth: 230, minHeight: 200)
+        .frame(minWidth: 180, minHeight: 120)
         .background(
             ZStack {
                 // Frosted Glass Material
